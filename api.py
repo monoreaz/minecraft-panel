@@ -1,19 +1,18 @@
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import (
     Depends,
     FastAPI
 )
-
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from auth import (
     get_current_user,
     router as auth_router
 )
-
 from schemas import ServerCreate
-
 from server_manager import (
     create_server,
     delete_server,
@@ -25,7 +24,17 @@ from server_manager import (
 )
 
 
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+STATIC_DIR = FRONTEND_DIR / "static"
+
 app = FastAPI()
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
+    name="static"
+)
 
 app.include_router(auth_router)
 
@@ -33,14 +42,34 @@ app.include_router(auth_router)
 @app.get("/")
 def home():
     return FileResponse(
-        "frontend/index.html"
+        FRONTEND_DIR / "index.html"
     )
 
 
 @app.get("/create")
 def create_page():
     return FileResponse(
-        "frontend/create.html"
+        FRONTEND_DIR / "create.html"
+    )
+
+
+@app.get(
+    "/register",
+    include_in_schema=False
+)
+def register_page():
+    return FileResponse(
+        FRONTEND_DIR / "register.html"
+    )
+
+
+@app.get(
+    "/login",
+    include_in_schema=False
+)
+def login_page():
+    return FileResponse(
+        FRONTEND_DIR / "login.html"
     )
 
 
@@ -167,3 +196,21 @@ def delete_minecraft_server(
         server_id,
         current_user["id"]
     )
+# @app.get(
+#     "/register",
+#     include_in_schema=False
+# )
+# def register_page():
+#     return FileResponse(
+#         "frontend/register.html"
+#     )
+
+
+# @app.get(
+#     "/login",
+#     include_in_schema=False
+# )
+# def login_page():
+#     return FileResponse(
+#         "frontend/login.html"
+#     )

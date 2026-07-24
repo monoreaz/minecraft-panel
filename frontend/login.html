@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Login</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+</head>
+
+<body>
+    <main class="auth-container">
+        <section class="card">
+            <h1>Log in</h1>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">
+                        Username
+                    </label>
+
+                    <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button
+                    id="submit-button"
+                    class="primary full-width"
+                    type="submit"
+                >
+                    Log in
+                </button>
+            </form>
+
+            <div
+                id="message"
+                class="message"
+                aria-live="polite"
+            ></div>
+
+            <div class="auth-link">
+                No account yet?
+                <a href="/register">Register</a>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/auth.js"></script>
+
+    <script>
+        Auth.redirectAuthenticatedUser();
+
+        const form = document.getElementById(
+            "login-form"
+        );
+
+        const message = document.getElementById(
+            "message"
+        );
+
+        const submitButton = document.getElementById(
+            "submit-button"
+        );
+
+        form.addEventListener(
+            "submit",
+            async (event) => {
+                event.preventDefault();
+
+                message.textContent = "";
+                message.className = "message";
+
+                submitButton.disabled = true;
+
+                const body = new URLSearchParams();
+
+                body.set(
+                    "username",
+                    form.username.value.trim()
+                );
+
+                body.set(
+                    "password",
+                    form.password.value
+                );
+
+                try {
+                    const response = await fetch(
+                        "/auth/login",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+                            body
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(
+                            data.detail
+                            || "Login failed"
+                        );
+                    }
+
+                    Auth.setToken(
+                        data.access_token
+                    );
+
+                    window.location.href = "/";
+
+                } catch (error) {
+                    message.textContent =
+                        error.message;
+
+                    message.className =
+                        "message error";
+
+                } finally {
+                    submitButton.disabled = false;
+                }
+            }
+        );
+    </script>
+</body>
+
+</html>
