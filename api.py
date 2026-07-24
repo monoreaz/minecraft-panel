@@ -1,73 +1,169 @@
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import (
+    Depends,
+    FastAPI
+)
+
 from fastapi.responses import FileResponse
 
-from auth import router as auth_router
+from auth import (
+    get_current_user,
+    router as auth_router
+)
+
+from schemas import ServerCreate
 
 from server_manager import (
-    start_server,
-    stop_server,
-    send_command,
-    get_server_status,
     create_server,
+    delete_server,
     get_all_servers,
-    delete_server
+    get_server_status,
+    send_command,
+    start_server,
+    stop_server
 )
+
 
 app = FastAPI()
 
 app.include_router(auth_router)
 
+
 @app.get("/")
 def home():
-    return FileResponse("frontend/index.html")
+    return FileResponse(
+        "frontend/index.html"
+    )
 
 
 @app.get("/create")
 def create_page():
-    return FileResponse("frontend/create.html")
+    return FileResponse(
+        "frontend/create.html"
+    )
 
 
 @app.get("/servers")
-def servers():
-    return get_all_servers()
+def servers(
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return get_all_servers(
+        current_user["id"]
+    )
 
 
 @app.post("/servers")
-def create_new_server(name: str, version: str):
-    return create_server(name, version)
+def create_new_server(
+    data: ServerCreate,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return create_server(
+        user_id=current_user["id"],
+        server_name=data.name,
+        minecraft_version=data.version
+    )
 
 
-@app.post("/servers/{server_name}/start")
-def start_minecraft_server(server_name: str):
-    return start_server(server_name)
+@app.post(
+    "/servers/{server_id}/start"
+)
+def start_minecraft_server(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return start_server(
+        server_id,
+        current_user["id"]
+    )
 
 
-@app.post("/servers/{server_name}/stop")
-def stop_minecraft_server(server_name: str):
-    return stop_server(server_name)
+@app.post(
+    "/servers/{server_id}/stop"
+)
+def stop_minecraft_server(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return stop_server(
+        server_id,
+        current_user["id"]
+    )
 
 
-@app.post("/servers/{server_name}/day")
-def set_day(server_name: str):
+@app.post(
+    "/servers/{server_id}/day"
+)
+def set_day(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
     return send_command(
-        server_name,
+        server_id,
+        current_user["id"],
         "time set day"
     )
 
 
-@app.post("/servers/{server_name}/night")
-def set_night(server_name: str):
+@app.post(
+    "/servers/{server_id}/night"
+)
+def set_night(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
     return send_command(
-        server_name,
+        server_id,
+        current_user["id"],
         "time set night"
     )
 
 
-@app.get("/servers/{server_name}/status")
-def server_status(server_name: str):
-    return get_server_status(server_name)
+@app.get(
+    "/servers/{server_id}/status"
+)
+def server_status(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return get_server_status(
+        server_id,
+        current_user["id"]
+    )
 
 
-@app.delete("/servers/{server_name}")
-def delete_minecraft_server(server_name: str):
-    return delete_server(server_name)
+@app.delete(
+    "/servers/{server_id}"
+)
+def delete_minecraft_server(
+    server_id: int,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    return delete_server(
+        server_id,
+        current_user["id"]
+    )

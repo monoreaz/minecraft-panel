@@ -27,17 +27,27 @@ def init_database():
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
         connection.execute("""
             CREATE TABLE IF NOT EXISTS servers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
+                user_id INTEGER NOT NULL,
+                name TEXT COLLATE NOCASE NOT NULL,
                 version TEXT NOT NULL,
                 port INTEGER UNIQUE NOT NULL,
-                path TEXT NOT NULL
+                path TEXT UNIQUE NOT NULL,
+                created_at TEXT NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                UNIQUE (user_id, name)
             )
         """)
 
@@ -146,6 +156,7 @@ def get_user_by_email(email: str):
 
 
 def add_server(
+    user_id: int,
     name: str,
     version: str,
     port: int,
@@ -154,17 +165,19 @@ def add_server(
     connection = get_connection()
 
     try:
-        connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO servers (
+                user_id,
                 name,
                 version,
                 port,
                 path
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
+                user_id,
                 name,
                 version,
                 port,
@@ -174,11 +187,16 @@ def add_server(
 
         connection.commit()
 
+        return cursor.lastrowid
+
     finally:
         connection.close()
 
 
-def get_server_by_name(name: str):
+def get_server_by_id(
+    server_id: int,
+    user_id: int
+):
     connection = get_connection()
 
     try:
@@ -186,9 +204,13 @@ def get_server_by_name(name: str):
             """
             SELECT *
             FROM servers
-            WHERE name = ?
+            WHERE id = ?
+              AND user_id = ?
             """,
-            (name,)
+            (
+                server_id,
+                user_id
+            )
         ).fetchone()
 
         if server is None:
@@ -200,7 +222,36 @@ def get_server_by_name(name: str):
         connection.close()
 
 
-def get_all_servers():
+def get_server_by_name(
+    name: str,
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        server = connection.execute(
+            """
+            SELECT *
+            FROM servers
+            WHERE name = ? COLLATE NOCASE
+              AND user_id = ?
+            """,
+            (
+                name,
+                user_id
+            )
+        ).fetchone()
+
+        if server is None:
+            return None
+
+        return dict(server)
+
+    finally:
+        connection.close()
+
+
+def get_servers_by_user(user_id: int):
     connection = get_connection()
 
     try:
@@ -208,8 +259,10 @@ def get_all_servers():
             """
             SELECT *
             FROM servers
+            WHERE user_id = ?
             ORDER BY id
-            """
+            """,
+            (user_id,)
         ).fetchall()
 
         return [
@@ -221,19 +274,48 @@ def get_all_servers():
         connection.close()
 
 
-def remove_server(name: str):
+def get_all_server_ports():
     connection = get_connection()
 
     try:
-        connection.execute(
+        rows = connection.execute(
+            """
+            SELECT port
+            FROM servers
+            """
+        ).fetchall()
+
+        return [
+            row["port"]
+            for row in rows
+        ]
+
+    finally:
+        connection.close()
+
+
+def remove_server(
+    server_id: int,
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
             """
             DELETE FROM servers
-            WHERE name = ?
+            WHERE id = ?
+              AND user_id = ?
             """,
-            (name,)
+            (
+                server_id,
+                user_id
+            )
         )
 
         connection.commit()
+
+        return cursor.rowcount > 0
 
     finally:
         connection.close()

@@ -1,48 +1,56 @@
 from pathlib import Path
-from mcstatus import JavaServer
-import subprocess
-# import json
+
+import re
+import shutil
 import socket
+import sqlite3
+import subprocess
+
 import requests
 
+from mcstatus import JavaServer
+
 from database import (
-    init_database,
     add_server,
+    get_all_server_ports,
+    get_server_by_id,
     get_server_by_name,
-    get_all_servers as db_get_all_servers,
+    get_servers_by_user,
+    init_database,
     remove_server
 )
 
-SERVERS_DIRECTORY = Path("/home/artur/minecraft-servers")
-# DATABASE_FILE = Path("/home/artur/minecraft-panel/servers.json")
+
+SERVERS_DIRECTORY = Path(
+    "/home/artur/minecraft-servers"
+)
+
+SERVER_NAME_PATTERN = re.compile(
+    r"^[A-Za-z0-9_-]{3,32}$"
+)
 
 running_servers = {}
 
+
 init_database()
-
-# def load_servers():
-#     with open(DATABASE_FILE, "r") as file:
-#         return json.load(file)
-
-
-# def save_servers(servers):
-#     with open(DATABASE_FILE, "w") as file:
-#         json.dump(servers, file, indent=4)
 
 
 def is_port_free(port: int):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        result = sock.connect_ex(("127.0.0.1", port))
+    with socket.socket(
+        socket.AF_INET,
+        socket.SOCK_STREAM
+    ) as sock:
+        result = sock.connect_ex(
+            ("127.0.0.1", port)
+        )
+
         return result != 0
 
 
 def find_free_port():
-
-    servers = db_get_all_servers()
-    used_ports = [
-        server["port"]
-        for server in servers
-    ]
+    used_ports = set(
+        get_all_server_ports()
+    )
 
     port = 25565
 
@@ -51,95 +59,188 @@ def find_free_port():
         or not is_port_free(port)
     ):
         port += 1
+
     return port
 
 
-# def get_server(server_name: str):
-#     servers = load_servers()
-
-#     for server in servers:
-#         if server["name"] == server_name:
-#             return server
-
-#     return None
-
-
-def get_server(server_name: str):
-
-    return get_server_by_name(
-        server_name
+def get_server(
+    server_id: int,
+    user_id: int
+):
+    return get_server_by_id(
+        server_id,
+        user_id
     )
 
 
-def create_server(server_name: str, minecraft_version: str):
-    # servers = load_servers()
+def get_public_server_data(server: dict):
+    return {
+        "id": server["id"],
+        "name": server["name"],
+        "version": server["version"],
+        "port": server["port"],
+        "created_at": server["created_at"]
+    }
 
-    # for server in servers:
-    if get_server(server_name) is not None:
+
+def get_all_servers(user_id: int):
+    servers = get_servers_by_user(
+        user_id
+    )
+
+    return [
+        get_public_server_data(server)
+        for server in servers
+    ]
+
+
+def create_server(
+    user_id: int,
+    server_name: str,
+    minecraft_version: str
+):
+    if not SERVER_NAME_PATTERN.fullmatch(
+        server_name
+    ):
         return {
             "success": False,
-            "message":
-            "A server with this name already exists"
+            "message": "Invalid server name"
+        }
+
+    existing_server = get_server_by_name(
+        server_name,
+        user_id
+    )
+
+    if existing_server is not None:
+        return {
+            "success": False,
+            "message": (
+                "A server with this name "
+                "already exists"
+            )
         }
 
     port = find_free_port()
 
-    server_path = SERVERS_DIRECTORY / server_name
+    user_directory = (
+        SERVERS_DIRECTORY
+        / f"user-{user_id}"
+    )
 
-    server_path.mkdir(parents=True)
+    server_path = (
+        user_directory
+        / server_name
+    )
+
+    if server_path.exists():
+        return {
+            "success": False,
+            "message": (
+                "The server directory "
+                "already exists"
+            )
+        }
 
     try:
-        download_server_jar(minecraft_version, server_path)
+        server_path.mkdir(
+            parents=True,
+            exist_ok=False
+        )
+
+        download_server_jar(
+            minecraft_version,
+            server_path
+        )
 
         properties = (
             f"server-port={port}\n"
             f"motd={server_name}\n"
         )
 
-        with open(server_path / "server.properties", "w") as file:
+        with open(
+            server_path / "server.properties",
+            "w",
+            encoding="utf-8"
+        ) as file:
             file.write(properties)
 
-        with open(server_path / "eula.txt", "w") as file:
+        with open(
+            server_path / "eula.txt",
+            "w",
+            encoding="utf-8"
+        ) as file:
             file.write("eula=true\n")
 
-    except Exception as error:
-        import shutil
+        server_id = add_server(
+            user_id=user_id,
+            name=server_name,
+            version=minecraft_version,
+            port=port,
+            path=str(server_path)
+        )
 
-        shutil.rmtree(server_path)
+    except sqlite3.IntegrityError:
+        if server_path.exists():
+            shutil.rmtree(server_path)
 
         return {
             "success": False,
-            "message": f"Server creation error: {error}"
+            "message": (
+                "The server name or port "
+                "is already in use"
+            )
         }
 
-    new_server = {
-        "name": server_name,
-        "version": minecraft_version,
-        "port": port,
-        "path": str(server_path)
-    }
+    except Exception as error:
+        if server_path.exists():
+            shutil.rmtree(server_path)
 
-    # servers.append(new_server)
-    # save_servers(servers)
-    add_server(
-        name=server_name,
-        version=minecraft_version,
-        port=port,
-        path=str(server_path)
-    )
+        return {
+            "success": False,
+            "message": (
+                f"Server creation error: {error}"
+            )
+        }
+
     return {
         "success": True,
         "message": "Server successfully created",
-        "server": new_server
+        "server": {
+            "id": server_id,
+            "name": server_name,
+            "version": minecraft_version,
+            "port": port
+        }
     }
 
 
-def get_all_servers():
-    return db_get_all_servers()
+def clean_running_server(server_id: int):
+    entry = running_servers.pop(
+        server_id,
+        None
+    )
+
+    if entry is None:
+        return
+
+    log_file = entry.get("log_file")
+
+    if (
+        log_file is not None
+        and not log_file.closed
+    ):
+        log_file.close()
 
 
-def start_server(server_name: str):
-    server = get_server(server_name)
+def start_server(
+    server_id: int,
+    user_id: int
+):
+    server = get_server(
+        server_id,
+        user_id
+    )
 
     if server is None:
         return {
@@ -147,14 +248,35 @@ def start_server(server_name: str):
             "message": "Server not found"
         }
 
-    if server_name in running_servers:
+    existing_entry = running_servers.get(
+        server_id
+    )
+
+    if existing_entry is not None:
+        process = existing_entry["process"]
+
+        if process.poll() is None:
+            return {
+                "success": False,
+                "message": "Server is already running"
+            }
+
+        clean_running_server(server_id)
+
+    if not is_port_free(server["port"]):
         return {
             "success": False,
-            "message": "Server is already running"
+            "message": "Server port is already in use"
         }
 
-    server_path = Path(server["path"])
-    server_jar = server_path / "server.jar"
+    server_path = Path(
+        server["path"]
+    )
+
+    server_jar = (
+        server_path
+        / "server.jar"
+    )
 
     if not server_jar.exists():
         return {
@@ -171,39 +293,95 @@ def start_server(server_name: str):
         "nogui"
     ]
 
-    process = subprocess.Popen(
-        command,
-        cwd=server_path,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True
+    log_file = open(
+        server_path / "console.log",
+        "a",
+        encoding="utf-8"
     )
 
-    running_servers[server_name] = process
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=server_path,
+            stdin=subprocess.PIPE,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+
+    except Exception:
+        log_file.close()
+        raise
+
+    running_servers[server_id] = {
+        "process": process,
+        "log_file": log_file
+    }
 
     return {
         "success": True,
-        "message": "Server Online",
+        "message": "Server starting",
         "pid": process.pid
     }
 
 
-def stop_server(server_name: str):
-    if server_name not in running_servers:
+def stop_server(
+    server_id: int,
+    user_id: int
+):
+    server = get_server(
+        server_id,
+        user_id
+    )
+
+    if server is None:
+        return {
+            "success": False,
+            "message": "Server not found"
+        }
+
+    entry = running_servers.get(
+        server_id
+    )
+
+    if entry is None:
+        return {
+            "success": False,
+            "message": (
+                "Server is not managed by "
+                "this panel process"
+            )
+        }
+
+    process = entry["process"]
+
+    if process.poll() is not None:
+        clean_running_server(server_id)
+
         return {
             "success": False,
             "message": "Server is offline"
         }
 
-    process = running_servers[server_name]
+    try:
+        if process.stdin is not None:
+            process.stdin.write("stop\n")
+            process.stdin.flush()
 
-    process.stdin.write("stop\n")
-    process.stdin.flush()
+        process.wait(timeout=60)
 
-    process.wait()
+    except subprocess.TimeoutExpired:
+        process.terminate()
 
-    del running_servers[server_name]
+        try:
+            process.wait(timeout=10)
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+    finally:
+        clean_running_server(server_id)
 
     return {
         "success": True,
@@ -211,41 +389,95 @@ def stop_server(server_name: str):
     }
 
 
-def send_command(server_name: str, command: str):
-    if server_name not in running_servers:
+def send_command(
+    server_id: int,
+    user_id: int,
+    command: str
+):
+    server = get_server(
+        server_id,
+        user_id
+    )
+
+    if server is None:
+        return {
+            "success": False,
+            "message": "Server not found"
+        }
+
+    entry = running_servers.get(
+        server_id
+    )
+
+    if entry is None:
         return {
             "success": False,
             "message": "Server is not running"
         }
 
-    process = running_servers[server_name]
+    process = entry["process"]
 
-    process.stdin.write(command + "\n")
+    if process.poll() is not None:
+        clean_running_server(server_id)
+
+        return {
+            "success": False,
+            "message": "Server is offline"
+        }
+
+    if process.stdin is None:
+        return {
+            "success": False,
+            "message": (
+                "Server console is unavailable"
+            )
+        }
+
+    process.stdin.write(
+        command + "\n"
+    )
+
     process.stdin.flush()
 
     return {
         "success": True,
-        "message": f"Command executed: {command}"
+        "message": (
+            f"Command executed: {command}"
+        )
     }
 
 
-def get_server_status(server_name: str):
-    server = get_server(server_name)
+def get_server_status(
+    server_id: int,
+    user_id: int
+):
+    server = get_server(
+        server_id,
+        user_id
+    )
 
     if server is None:
         return {
+            "found": False,
             "online": False,
             "players": 0,
             "max_players": 0
         }
 
     try:
-        address = "127.0.0.1:" + str(server["port"])
+        address = (
+            "127.0.0.1:"
+            + str(server["port"])
+        )
 
-        minecraft_server = JavaServer.lookup(address)
+        minecraft_server = (
+            JavaServer.lookup(address)
+        )
+
         status = minecraft_server.status()
 
         return {
+            "found": True,
             "online": True,
             "players": status.players.online,
             "max_players": status.players.max
@@ -253,19 +485,27 @@ def get_server_status(server_name: str):
 
     except Exception:
         return {
+            "found": True,
             "online": False,
             "players": 0,
             "max_players": 0
         }
 
 
-def download_server_jar(minecraft_version: str, server_path: Path):
+def download_server_jar(
+    minecraft_version: str,
+    server_path: Path
+):
     manifest_url = (
         "https://piston-meta.mojang.com/"
         "mc/game/version_manifest_v2.json"
     )
 
-    response = requests.get(manifest_url, timeout=30)
+    response = requests.get(
+        manifest_url,
+        timeout=30
+    )
+
     response.raise_for_status()
 
     manifest = response.json()
@@ -278,7 +518,8 @@ def download_server_jar(minecraft_version: str, server_path: Path):
 
     if version_data is None:
         raise ValueError(
-            f"Minecraft version {minecraft_version} not found"
+            "Minecraft version "
+            f"{minecraft_version} not found"
         )
 
     version_response = requests.get(
@@ -287,13 +528,25 @@ def download_server_jar(minecraft_version: str, server_path: Path):
     )
 
     version_response.raise_for_status()
-    version_info = version_response.json()
 
-    server_download = version_info["downloads"]["server"]["url"]
+    version_info = (
+        version_response.json()
+    )
 
-    server_jar_path = server_path / "server.jar"
+    server_download = (
+        version_info["downloads"]
+        ["server"]["url"]
+    )
 
-    print(f"Downloading Minecraft {minecraft_version}...")
+    server_jar_path = (
+        server_path
+        / "server.jar"
+    )
+
+    print(
+        "Downloading Minecraft "
+        f"{minecraft_version}..."
+    )
 
     jar_response = requests.get(
         server_download,
@@ -303,7 +556,10 @@ def download_server_jar(minecraft_version: str, server_path: Path):
 
     jar_response.raise_for_status()
 
-    with open(server_jar_path, "wb") as file:
+    with open(
+        server_jar_path,
+        "wb"
+    ) as file:
         for chunk in jar_response.iter_content(
             chunk_size=1024 * 1024
         ):
@@ -313,8 +569,14 @@ def download_server_jar(minecraft_version: str, server_path: Path):
     return server_jar_path
 
 
-def delete_server(server_name: str):
-    server = get_server(server_name)
+def delete_server(
+    server_id: int,
+    user_id: int
+):
+    server = get_server(
+        server_id,
+        user_id
+    )
 
     if server is None:
         return {
@@ -322,30 +584,49 @@ def delete_server(server_name: str):
             "message": "Server not found"
         }
 
-    if server_name in running_servers:
+    entry = running_servers.get(
+        server_id
+    )
+
+    if (
+        entry is not None
+        and entry["process"].poll() is None
+    ):
         return {
             "success": False,
             "message": "Stop the server first"
         }
 
-    server_path = Path(server["path"])
+    if entry is not None:
+        clean_running_server(server_id)
 
-    if server_path.exists():
-        import shutil
-
-        shutil.rmtree(server_path)
-
-    # servers = load_servers()
-    remove_server(
-        server_name
+    server_path = Path(
+        server["path"]
     )
-    # servers = [
-    #     server
-    #     for server in servers
-    #     if server["name"] != server_name
-    # ]
 
-    # save_servers(servers)
+    try:
+        if server_path.exists():
+            shutil.rmtree(server_path)
+
+    except OSError as error:
+        return {
+            "success": False,
+            "message": (
+                f"Could not delete server files: "
+                f"{error}"
+            )
+        }
+
+    deleted = remove_server(
+        server_id,
+        user_id
+    )
+
+    if not deleted:
+        return {
+            "success": False,
+            "message": "Server not found"
+        }
 
     return {
         "success": True,
