@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
+from auth import router as auth_router
+
 from server_manager import (
     start_server,
     stop_server,
@@ -13,6 +15,7 @@ from server_manager import (
 
 app = FastAPI()
 
+app.include_router(auth_router)
 
 @app.get("/")
 def home():
