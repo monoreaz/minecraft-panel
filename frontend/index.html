@@ -191,11 +191,23 @@
             version.textContent =
                 `Version: ${server.version}`;
 
-            const address =
-                document.createElement("div");
+            // const address =
+            //     document.createElement("div");
 
-            address.textContent =
-                `Port: ${server.port}`;
+            // address.textContent =
+            //     `Port: ${server.port}`;
+
+            const host = document.createElement("div");
+
+            host.textContent =`IP: ${server.host}`;
+
+            const port = document.createElement("div");
+
+            port.textContent = `Port: ${server.port}`;
+
+            const address = document.createElement("div");
+
+            address.textContent = `Address: ${server.address}`;
 
             const status =
                 document.createElement("div");
@@ -217,6 +229,8 @@
 
             info.append(
                 version,
+                host,
+                port,
                 address,
                 status,
                 players

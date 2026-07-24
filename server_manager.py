@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import os
 import re
 import shutil
 import socket
@@ -8,6 +9,7 @@ import subprocess
 
 import requests
 
+from dotenv import load_dotenv
 from mcstatus import JavaServer
 
 from database import (
@@ -18,6 +20,15 @@ from database import (
     get_servers_by_user,
     init_database,
     remove_server
+)
+
+
+load_dotenv()
+
+
+SERVER_HOST = os.getenv(
+    "SERVER_HOST",
+    "127.0.0.1"
 )
 
 
@@ -78,10 +89,13 @@ def get_public_server_data(server: dict):
         "id": server["id"],
         "name": server["name"],
         "version": server["version"],
+        "host": SERVER_HOST,
         "port": server["port"],
+        "address": (
+            f"{SERVER_HOST}:{server['port']}"
+        ),
         "created_at": server["created_at"]
     }
-
 
 def get_all_servers(user_id: int):
     servers = get_servers_by_user(
