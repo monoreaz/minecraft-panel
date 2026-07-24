@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minecraft Hosting</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            padding: 40px;
+        }
+
+        .server-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .server {
+            background: #2b2b2b;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .delete {
+            background: #ffc400;
+            color: white;
+        }
+
+        .status {
+            margin: 15px 0;
+            font-size: 18px;
+        }
+
+        .players {
+            margin-bottom: 15px;
+        }
+
+        .server-info {
+            color: #bbbbbb;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Minecraft Hosting</h1>
+
+    <button onclick="window.location.href='/create'">
+        CREATE SERVER
+    </button>
+
+    <div id="servers" class="server-list">
+        Loading servers...
+    </div>
+
+    <script>
+        async function loadServers() {
+            const response = await fetch("/servers");
+            const servers = await response.json();
+
+            const container = document.getElementById("servers");
+
+            container.innerHTML = "";
+
+            if (servers.length === 0) {
+                container.innerHTML =
+                    "<p>You don't have any servers yet.</p>";
+
+                return;
+            }
+
+            servers.forEach(server => {
+                const serverElement =
+                    document.createElement("div");
+
+                serverElement.className = "server";
+
+                serverElement.innerHTML = `
+                    <h2>${server.name}</h2>
+
+                    <div class="server-info">
+                        Version: ${server.version}
+                        <br>
+                        IP: 100.72.234.98
+                        <br>
+                        Port: ${server.port}
+                        <br>
+                        Address: 100.72.234.98:${server.port}
+                    </div>
+
+                    <div
+                        class="status"
+                        id="status-${server.name}"
+                    >
+                        Status: Checking...
+                    </div>
+
+                    <div
+                        class="players"
+                        id="players-${server.name}"
+                    >
+                        Players: 0/0
+                    </div>
+
+                    <button
+                        class="start"
+                        onclick="startServer('${server.name}')"
+                    >
+                        START
+                    </button>
+
+                    <button
+                        class="stop"
+                        onclick="stopServer('${server.name}')"
+                    >
+                        STOP
+                    </button>
+
+                    <button
+                        onclick="setDay('${server.name}')"
+                    >
+                        DAY
+                    </button>
+
+                    <button
+                        onclick="setNight('${server.name}')"
+                    >
+                        NIGHT
+                    </button>
+
+                    <button
+                        class="delete"
+                        onclick="deleteServer('${server.name}')"
+                    >
+                        DELETE SERVER
+                    </button>
+                `;
+
+                container.appendChild(serverElement);
+
+                updateStatus(server.name);
+            });
+        }
+
+
+        async function startServer(serverName) {
+            const response = await fetch(
+                `/servers/${serverName}/start`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            updateStatus(serverName);
+        }
+
+
+        async function stopServer(serverName) {
+            const response = await fetch(
+                `/servers/${serverName}/stop`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            updateStatus(serverName);
+        }
+
+
+        async function setDay(serverName) {
+            const response = await fetch(
+                `/servers/${serverName}/day`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+        }
+
+
+        async function setNight(serverName) {
+            const response = await fetch(
+                `/servers/${serverName}/night`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+        }
+
+
+        async function updateStatus(serverName) {
+            const response = await fetch(
+                `/servers/${serverName}/status`
+            );
+
+            const data = await response.json();
+
+            const statusElement =
+                document.getElementById(
+                    `status-${serverName}`
+                );
+
+            const playersElement =
+                document.getElementById(
+                    `players-${serverName}`
+                );
+
+            if (data.online) {
+                statusElement.innerText =
+                    "Status: ONLINE";
+
+                playersElement.innerText =
+                    `Players: ${data.players}/${data.max_players}`;
+            } else {
+                statusElement.innerText =
+                    "Status: OFFLINE";
+
+                playersElement.innerText =
+                    "Players: 0/0";
+            }
+        }
+
+
+        async function updateAllStatuses() {
+            const response =
+                await fetch("/servers");
+
+            const servers =
+                await response.json();
+
+            servers.forEach(server => {
+                updateStatus(server.name);
+            });
+        }
+
+
+        async function deleteServer(serverName) {
+            const confirmed = confirm(
+                `Are you sure you want to delete server ${serverName}?`
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            const response = await fetch(
+                `/servers/${serverName}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            if (data.success) {
+                loadServers();
+            }
+        }
+
+
+        loadServers();
+
+        setInterval(
+            updateAllStatuses,
+            5000
+        );
+    </script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Minecraft Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e1e;
+            color: white;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+        }
+
+        input {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0 20px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .create {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .back {
+            background: #555;
+            color: white;
+        }
+
+        #message {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create Minecraft Server</h1>
+
+        <form id="create-form">
+            <label>Server name</label>
+
+            <input
+                type="text"
+                id="server-name"
+                placeholder="Server name"
+                required
+            >
+
+            <label>Minecraft version</label>
+
+            <input
+                type="text"
+                id="minecraft-version"
+                placeholder="1.21.1"
+                required
+            >
+
+            <button
+                type="submit"
+                class="create"
+            >
+                CREATE SERVER
+            </button>
+
+            <button
+                type="button"
+                class="back"
+                onclick="goBack()"
+            >
+                BACK
+            </button>
+        </form>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById("create-form");
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const name = document
+                .getElementById("server-name")
+                .value;
+
+            const version = document
+                .getElementById("minecraft-version")
+                .value;
+
+            const response = await fetch(
+                `/servers?name=${encodeURIComponent(name)}&version=${encodeURIComponent(version)}`,
+                {
+                    method: "POST"
+                }
+            );
+
+            const data = await response.json();
+
+            const message = document
+                .getElementById("message");
+
+            message.innerText = data.message;
+
+            if (data.success) {
+                setTimeout(function() {
+                    window.location.href = "/";
+                }, 1000);
+            }
+        });
+
+        function goBack() {
+            window.location.href = "/";
+        }
+    </script>
+</body>
+</html>
