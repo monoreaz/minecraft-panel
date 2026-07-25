@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Create server</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/styles.css"
-    >
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 
 <body>
@@ -23,49 +16,23 @@
 
             <form id="create-form">
                 <div class="form-group">
-                    <label for="name">
-                        Server name
-                    </label>
+                    <label for="name">Server name</label>
 
-                    <input
-                        id="name"
-                        name="name"
-                        type="text"
-                        minlength="3"
-                        maxlength="32"
-                        pattern="[A-Za-z0-9_-]+"
-                        required
-                    >
+                    <input id="name" name="name" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]+" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="version">
-                        Minecraft version
-                    </label>
+                    <label for="version">Minecraft version</label>
 
-                    <input
-                        id="version"
-                        name="version"
-                        type="text"
-                        placeholder="1.21.1"
-                        required
-                    >
+                    <input id="version" name="version" type="text" placeholder="1.21.1" required>
                 </div>
 
-                <button
-                    id="submit-button"
-                    class="primary full-width"
-                    type="submit"
-                >
+                <button id="submit-button" class="primary full-width" type="submit">
                     Create server
                 </button>
             </form>
 
-            <div
-                id="message"
-                class="message"
-                aria-live="polite"
-            ></div>
+            <div id="message" class="message" aria-live="polite"></div>
 
             <div class="auth-link">
                 <a href="/">Back to dashboard</a>
@@ -77,97 +44,67 @@
 
     <script>
         if (!Auth.requireAuth()) {
-            throw new Error(
-                "Authentication required"
-            );
+            throw new Error("Authentication required");
         }
 
-        const form = document.getElementById(
-            "create-form"
-        );
+        const form = document.getElementById("create-form");
+        const message = document.getElementById("message");
+        const submitButton = document.getElementById("submit-button");
 
-        const message = document.getElementById(
-            "message"
-        );
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
 
-        const submitButton = document.getElementById(
-            "submit-button"
-        );
+            message.textContent = "";
+            message.className = "message";
 
-        form.addEventListener(
-            "submit",
-            async (event) => {
-                event.preventDefault();
+            submitButton.disabled = true;
 
-                message.textContent = "";
-                message.className = "message";
+            const payload = {
+                name: form.name.value.trim(),
+                version: form.version.value.trim()
+            };
 
-                submitButton.disabled = true;
+            try {
+                const response = await Auth.apiRequest("/servers", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                const payload = {
-                    name: form.name.value.trim(),
-                    version: form.version.value.trim()
-                };
+                const data = await response.json();
 
-                try {
-                    const response =
-                        await Auth.apiRequest(
-                            "/servers",
-                            {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type":
-                                        "application/json"
-                                },
-                                body: JSON.stringify(payload)
-                            }
-                        );
+                if (!response.ok) {
+                    const detail =
+                        typeof data.detail === "string"
+                            ? data.detail
+                            : "Invalid server data";
 
-                    const data =
-                        await response.json();
-
-                    if (!response.ok) {
-                        const detail =
-                            typeof data.detail === "string"
-                                ? data.detail
-                                : "Invalid server data";
-
-                        throw new Error(detail);
-                    }
-
-                    if (!data.success) {
-                        throw new Error(
-                            data.message
-                            || "Server creation failed"
-                        );
-                    }
-
-                    message.textContent =
-                        data.message;
-
-                    message.className =
-                        "message success";
-
-                    setTimeout(
-                        () => {
-                            window.location.href = "/";
-                        },
-                        700
-                    );
-
-                } catch (error) {
-                    message.textContent =
-                        error.message;
-
-                    message.className =
-                        "message error";
-
-                } finally {
-                    submitButton.disabled = false;
+                    throw new Error(detail);
                 }
+
+                if (!data.success) {
+                    throw new Error(
+                        data.message || "Server creation failed"
+                    );
+                }
+
+                message.textContent = data.message;
+                message.className = "message success";
+
+                setTimeout(() => {
+                    window.location.href = "/";
+                }, 700);
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "message error";
+
+            } finally {
+                submitButton.disabled = false;
             }
-        );
+        });
     </script>
 </body>
-
 </html>

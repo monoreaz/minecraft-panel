@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Minecraft Hosting</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/styles.css"
-    >
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 
 <body>
@@ -28,33 +21,19 @@
             </div>
 
             <div class="header-actions">
-                <a
-                    class="button primary"
-                    href="/create"
-                >
+                <a class="button primary" href="/create">
                     Create server
                 </a>
 
-                <button
-                    id="logout-button"
-                    class="secondary"
-                    type="button"
-                >
+                <button id="logout-button" class="secondary" type="button">
                     Log out
                 </button>
             </div>
         </header>
 
-        <div
-            id="message"
-            class="message"
-            aria-live="polite"
-        ></div>
+        <div id="message" class="message" aria-live="polite"></div>
 
-        <section
-            id="server-list"
-            class="server-list"
-        ></section>
+        <section id="server-list" class="server-list"></section>
     </main>
 
     <script src="/static/auth.js"></script>
@@ -64,10 +43,7 @@
             initializeDashboard();
         }
 
-        const logoutButton =
-            document.getElementById(
-                "logout-button"
-            );
+        const logoutButton = document.getElementById("logout-button");
 
         logoutButton.addEventListener(
             "click",
@@ -88,17 +64,11 @@
 
         async function loadCurrentUser() {
             try {
-                const response =
-                    await Auth.apiRequest(
-                        "/auth/me"
-                    );
+                const response = await Auth.apiRequest("/auth/me");
 
-                const user =
-                    await response.json();
+                const user = await response.json();
 
-                document.getElementById(
-                    "current-user"
-                ).textContent =
+                document.getElementById("current-user").textContent =
                     `Logged in as ${user.username}`;
 
             } catch (error) {
@@ -111,39 +81,25 @@
 
         async function loadServers() {
             const serverList =
-                document.getElementById(
-                    "server-list"
-                );
+                document.getElementById("server-list");
 
-            serverList.textContent =
-                "Loading servers...";
+            serverList.textContent = "Loading servers...";
 
             try {
-                const response =
-                    await Auth.apiRequest(
-                        "/servers"
-                    );
+                const response = await Auth.apiRequest("/servers");
 
-                const servers =
-                    await response.json();
+                const servers = await response.json();
 
                 serverList.replaceChildren();
 
                 if (servers.length === 0) {
-                    const emptyState =
-                        document.createElement(
-                            "div"
-                        );
+                    const emptyState = document.createElement("div");
 
-                    emptyState.className =
-                        "empty-state";
-
+                    emptyState.className = "empty-state";
                     emptyState.textContent =
                         "You do not have any servers yet.";
 
-                    serverList.appendChild(
-                        emptyState
-                    );
+                    serverList.appendChild(emptyState);
 
                     return;
                 }
@@ -167,39 +123,26 @@
         }
 
         function createServerCard(server) {
-            const card =
-                document.createElement(
-                    "article"
-                );
+            const card = document.createElement("article");
 
             card.className = "server-card";
             card.dataset.serverId = server.id;
 
-            const title =
-                document.createElement("h2");
+            const title = document.createElement("h2");
 
             title.textContent = server.name;
 
-            const info =
-                document.createElement("div");
+            const info = document.createElement("div");
 
             info.className = "server-info";
 
-            const version =
-                document.createElement("div");
+            const version = document.createElement("div");
 
-            version.textContent =
-                `Version: ${server.version}`;
-
-            // const address =
-            //     document.createElement("div");
-
-            // address.textContent =
-            //     `Port: ${server.port}`;
+            version.textContent = `Version: ${server.version}`;
 
             const host = document.createElement("div");
 
-            host.textContent =`IP: ${server.host}`;
+            host.textContent = `IP: ${server.host}`;
 
             const port = document.createElement("div");
 
@@ -209,23 +152,15 @@
 
             address.textContent = `Address: ${server.address}`;
 
-            const status =
-                document.createElement("div");
+            const status = document.createElement("div");
 
-            status.className =
-                "server-status status-offline";
+            status.className = "server-status status-offline";
+            status.textContent = "Status: checking...";
 
-            status.textContent =
-                "Status: checking...";
+            const players = document.createElement("div");
 
-            const players =
-                document.createElement("div");
-
-            players.className =
-                "server-players";
-
-            players.textContent =
-                "Players: 0/0";
+            players.className = "server-players";
+            players.textContent = "Players: 0/0";
 
             info.append(
                 version,
@@ -236,52 +171,35 @@
                 players
             );
 
-            const actions =
-                document.createElement("div");
+            const actions = document.createElement("div");
 
-            actions.className =
-                "server-actions";
+            actions.className = "server-actions";
 
             actions.append(
                 createActionButton(
                     "Start",
                     "primary",
-                    () => runServerAction(
-                        server.id,
-                        "start"
-                    )
+                    () => runServerAction(server.id, "start")
                 ),
                 createActionButton(
                     "Stop",
                     "danger",
-                    () => runServerAction(
-                        server.id,
-                        "stop"
-                    )
+                    () => runServerAction(server.id, "stop")
                 ),
                 createActionButton(
                     "Day",
                     "warning",
-                    () => runServerAction(
-                        server.id,
-                        "day"
-                    )
+                    () => runServerAction(server.id, "day")
                 ),
                 createActionButton(
                     "Night",
                     "secondary",
-                    () => runServerAction(
-                        server.id,
-                        "night"
-                    )
+                    () => runServerAction(server.id, "night")
                 ),
                 createActionButton(
                     "Delete",
                     "danger",
-                    () => deleteServer(
-                        server.id,
-                        server.name
-                    )
+                    () => deleteServer(server.id, server.name)
                 )
             );
 
@@ -294,13 +212,8 @@
             return card;
         }
 
-        function createActionButton(
-            text,
-            className,
-            handler
-        ) {
-            const button =
-                document.createElement("button");
+        function createActionButton(text, className, handler) {
+            const button = document.createElement("button");
 
             button.type = "button";
             button.textContent = text;
@@ -314,21 +227,16 @@
             return button;
         }
 
-        async function runServerAction(
-            serverId,
-            action
-        ) {
+        async function runServerAction(serverId, action) {
             try {
-                const response =
-                    await Auth.apiRequest(
-                        `/servers/${serverId}/${action}`,
-                        {
-                            method: "POST"
-                        }
-                    );
+                const response = await Auth.apiRequest(
+                    `/servers/${serverId}/${action}`,
+                    {
+                        method: "POST"
+                    }
+                );
 
-                const data =
-                    await response.json();
+                const data = await response.json();
 
                 showMessage(
                     data.message,
@@ -348,10 +256,7 @@
             }
         }
 
-        async function deleteServer(
-            serverId,
-            serverName
-        ) {
+        async function deleteServer(serverId, serverName) {
             const confirmed = window.confirm(
                 `Delete server "${serverName}"?`
             );
@@ -361,16 +266,14 @@
             }
 
             try {
-                const response =
-                    await Auth.apiRequest(
-                        `/servers/${serverId}`,
-                        {
-                            method: "DELETE"
-                        }
-                    );
+                const response = await Auth.apiRequest(
+                    `/servers/${serverId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
 
-                const data =
-                    await response.json();
+                const data = await response.json();
 
                 showMessage(
                     data.message,
@@ -390,52 +293,32 @@
         }
 
         async function refreshStatuses() {
-            const cards = document.querySelectorAll(
-                "[data-server-id]"
-            );
+            const cards = document.querySelectorAll("[data-server-id]");
 
             for (const card of cards) {
-                const serverId =
-                    card.dataset.serverId;
+                const serverId = card.dataset.serverId;
 
                 try {
-                    const response =
-                        await Auth.apiRequest(
-                            `/servers/${serverId}/status`
-                        );
+                    const response = await Auth.apiRequest(
+                        `/servers/${serverId}/status`
+                    );
 
-                    const data =
-                        await response.json();
+                    const data = await response.json();
 
-                    const status =
-                        card.querySelector(
-                            ".server-status"
-                        );
-
-                    const players =
-                        card.querySelector(
-                            ".server-players"
-                        );
+                    const status = card.querySelector(".server-status");
+                    const players = card.querySelector(".server-players");
 
                     if (data.online) {
-                        status.textContent =
-                            "Status: online";
-
-                        status.className =
-                            "server-status status-online";
+                        status.textContent = "Status: online";
+                        status.className = "server-status status-online";
 
                         players.textContent =
                             `Players: ${data.players}/${data.max_players}`;
 
                     } else {
-                        status.textContent =
-                            "Status: offline";
-
-                        status.className =
-                            "server-status status-offline";
-
-                        players.textContent =
-                            "Players: 0/0";
+                        status.textContent = "Status: offline";
+                        status.className = "server-status status-offline";
+                        players.textContent = "Players: 0/0";
                     }
 
                 } catch (error) {
@@ -444,14 +327,8 @@
             }
         }
 
-        function showMessage(
-            text,
-            isError
-        ) {
-            const message =
-                document.getElementById(
-                    "message"
-                );
+        function showMessage(text, isError) {
+            const message = document.getElementById("message");
 
             message.textContent = text;
 
@@ -461,5 +338,4 @@
         }
     </script>
 </body>
-
 </html>

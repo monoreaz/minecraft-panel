@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Login</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/styles.css"
-    >
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 
 <body>
@@ -23,47 +16,23 @@
 
             <form id="login-form">
                 <div class="form-group">
-                    <label for="username">
-                        Username
-                    </label>
+                    <label for="username">Username</label>
 
-                    <input
-                        id="username"
-                        name="username"
-                        type="text"
-                        autocomplete="username"
-                        required
-                    >
+                    <input id="username" name="username" type="text" autocomplete="username" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="password">
-                        Password
-                    </label>
+                    <label for="password">Password</label>
 
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        autocomplete="current-password"
-                        required
-                    >
+                    <input id="password" name="password" type="password" autocomplete="current-password" required>
                 </div>
 
-                <button
-                    id="submit-button"
-                    class="primary full-width"
-                    type="submit"
-                >
+                <button id="submit-button" class="primary full-width" type="submit">
                     Log in
                 </button>
             </form>
 
-            <div
-                id="message"
-                class="message"
-                aria-live="polite"
-            ></div>
+            <div id="message" class="message" aria-live="polite"></div>
 
             <div class="auth-link">
                 No account yet?
@@ -77,81 +46,50 @@
     <script>
         Auth.redirectAuthenticatedUser();
 
-        const form = document.getElementById(
-            "login-form"
-        );
+        const form = document.getElementById("login-form");
+        const message = document.getElementById("message");
+        const submitButton = document.getElementById("submit-button");
 
-        const message = document.getElementById(
-            "message"
-        );
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
 
-        const submitButton = document.getElementById(
-            "submit-button"
-        );
+            message.textContent = "";
+            message.className = "message";
 
-        form.addEventListener(
-            "submit",
-            async (event) => {
-                event.preventDefault();
+            submitButton.disabled = true;
 
-                message.textContent = "";
-                message.className = "message";
+            const body = new URLSearchParams();
 
-                submitButton.disabled = true;
+            body.set("username", form.username.value.trim());
+            body.set("password", form.password.value);
 
-                const body = new URLSearchParams();
+            try {
+                const response = await fetch("/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body
+                });
 
-                body.set(
-                    "username",
-                    form.username.value.trim()
-                );
+                const data = await response.json();
 
-                body.set(
-                    "password",
-                    form.password.value
-                );
-
-                try {
-                    const response = await fetch(
-                        "/auth/login",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-                            body
-                        }
-                    );
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(
-                            data.detail
-                            || "Login failed"
-                        );
-                    }
-
-                    Auth.setToken(
-                        data.access_token
-                    );
-
-                    window.location.href = "/";
-
-                } catch (error) {
-                    message.textContent =
-                        error.message;
-
-                    message.className =
-                        "message error";
-
-                } finally {
-                    submitButton.disabled = false;
+                if (!response.ok) {
+                    throw new Error(data.detail || "Login failed");
                 }
+
+                Auth.setToken(data.access_token);
+
+                window.location.href = "/";
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "message error";
+
+            } finally {
+                submitButton.disabled = false;
             }
-        );
+        });
     </script>
 </body>
-
 </html>

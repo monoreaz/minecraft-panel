@@ -1,19 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Register</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/styles.css"
-    >
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 
 <body>
@@ -23,66 +16,29 @@
 
             <form id="register-form">
                 <div class="form-group">
-                    <label for="username">
-                        Username
-                    </label>
+                    <label for="username">Username</label>
 
-                    <input
-                        id="username"
-                        name="username"
-                        type="text"
-                        minlength="3"
-                        maxlength="32"
-                        pattern="[A-Za-z0-9_]+"
-                        autocomplete="username"
-                        required
-                    >
+                    <input id="username" name="username" type="text" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" autocomplete="username" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">
-                        Email
-                    </label>
+                    <label for="email">Email</label>
 
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autocomplete="email"
-                        required
-                    >
+                    <input id="email" name="email" type="email" autocomplete="email" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="password">
-                        Password
-                    </label>
+                    <label for="password">Password</label>
 
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        minlength="8"
-                        maxlength="128"
-                        autocomplete="new-password"
-                        required
-                    >
+                    <input id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
                 </div>
 
-                <button
-                    id="submit-button"
-                    class="primary full-width"
-                    type="submit"
-                >
+                <button id="submit-button" class="primary full-width" type="submit">
                     Register
                 </button>
             </form>
 
-            <div
-                id="message"
-                class="message"
-                aria-live="polite"
-            ></div>
+            <div id="message" class="message" aria-live="polite"></div>
 
             <div class="auth-link">
                 Already registered?
@@ -96,83 +52,54 @@
     <script>
         Auth.redirectAuthenticatedUser();
 
-        const form = document.getElementById(
-            "register-form"
-        );
+        const form = document.getElementById("register-form");
+        const message = document.getElementById("message");
+        const submitButton = document.getElementById("submit-button");
 
-        const message = document.getElementById(
-            "message"
-        );
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
 
-        const submitButton = document.getElementById(
-            "submit-button"
-        );
+            message.textContent = "";
+            message.className = "message";
 
-        form.addEventListener(
-            "submit",
-            async (event) => {
-                event.preventDefault();
+            submitButton.disabled = true;
 
-                message.textContent = "";
-                message.className = "message";
+            const payload = {
+                username: form.username.value.trim(),
+                email: form.email.value.trim(),
+                password: form.password.value
+            };
 
-                submitButton.disabled = true;
+            try {
+                const response = await fetch("/auth/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-                const payload = {
-                    username: form.username.value.trim(),
-                    email: form.email.value.trim(),
-                    password: form.password.value
-                };
+                const data = await response.json();
 
-                try {
-                    const response = await fetch(
-                        "/auth/register",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-                            body: JSON.stringify(payload)
-                        }
-                    );
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(
-                            data.detail
-                            || "Registration failed"
-                        );
-                    }
-
-                    message.textContent =
-                        "Account created successfully";
-
-                    message.className =
-                        "message success";
-
-                    setTimeout(
-                        () => {
-                            window.location.href =
-                                "/login";
-                        },
-                        700
-                    );
-
-                } catch (error) {
-                    message.textContent =
-                        error.message;
-
-                    message.className =
-                        "message error";
-
-                } finally {
-                    submitButton.disabled = false;
+                if (!response.ok) {
+                    throw new Error(data.detail || "Registration failed");
                 }
+
+                message.textContent = "Account created successfully";
+                message.className = "message success";
+
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 700);
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "message error";
+
+            } finally {
+                submitButton.disabled = false;
             }
-        );
+        });
     </script>
 </body>
-
 </html>
