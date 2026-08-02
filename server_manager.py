@@ -39,6 +39,13 @@ MAX_SERVERS_PER_USER = int(
     )
 )
 
+MAX_RUNNING_SERVERS_PER_USER = int(
+    os.getenv(
+        "MAX_RUNNING_SERVERS_PER_USER",
+        "1"
+    )
+)
+
 SERVERS_DIRECTORY = Path(
     "/home/artur/minecraft-servers"
 )
@@ -267,6 +274,33 @@ def clean_running_server(server_id: int):
     ):
         log_file.close()
 
+def cleanup_finished_servers():
+    finished_server_ids = []
+
+    for server_id, entry in list(
+        running_servers.items()
+    ):
+        process = entry["process"]
+
+        if process.poll() is not None:
+            finished_server_ids.append(
+                server_id
+            )
+
+    for server_id in finished_server_ids:
+        clean_running_server(server_id)
+
+
+def count_running_servers_by_user(
+    user_id: int
+):
+    cleanup_finished_servers()
+
+    return sum(
+        1
+        for entry in running_servers.values()
+        if entry.get("user_id") == user_id
+    )
 
 def start_server(
     server_id: int,
@@ -297,6 +331,25 @@ def start_server(
             }
 
         clean_running_server(server_id)
+
+    running_server_count = (
+        count_running_servers_by_user(
+            user_id
+        )
+    )
+
+    if (
+        running_server_count
+        >= MAX_RUNNING_SERVERS_PER_USER
+    ):
+        return {
+            "success": False,
+            "message": (
+                "Running server limit reached. "
+                f"Maximum allowed: "
+                f"{MAX_RUNNING_SERVERS_PER_USER}"
+            )
+        }
 
     if not is_port_free(server["port"]):
         return {
@@ -350,7 +403,8 @@ def start_server(
 
     running_servers[server_id] = {
         "process": process,
-        "log_file": log_file
+        "log_file": log_file,
+        "user_id": user_id
     }
 
     return {
