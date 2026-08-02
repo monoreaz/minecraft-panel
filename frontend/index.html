@@ -12,12 +12,12 @@
 <body>
     <main class="page">
         <header class="header">
-            <div>
+            <div class="header-copy">
                 <h1>Minecraft Hosting</h1>
 
-                <div id="current-user">
-                    Loading account...
-                </div>
+                <p class="header-subtitle">
+                    Manage your Minecraft servers
+                </p>
             </div>
 
             <div class="header-actions">
@@ -25,9 +25,42 @@
                     Create server
                 </a>
 
-                <button id="logout-button" class="secondary" type="button">
-                    Log out
-                </button>
+                <div id="account-menu" class="account-menu">
+                    <button
+                        id="account-button"
+                        class="account-button"
+                        type="button"
+                        aria-label="Open account menu"
+                        aria-expanded="false"
+                        aria-controls="account-dropdown"
+                    >
+                        <span id="account-avatar" class="account-avatar">
+                            ?
+                        </span>
+                    </button>
+
+                    <div
+                        id="account-dropdown"
+                        class="account-dropdown"
+                        hidden
+                    >
+                        <div class="account-details">
+                            <strong id="account-username">
+                                Loading...
+                            </strong>
+
+                            <span id="account-email"></span>
+                        </div>
+
+                        <button
+                            id="logout-button"
+                            class="account-logout"
+                            type="button"
+                        >
+                            Log out
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -39,16 +72,88 @@
     <script src="/static/auth.js"></script>
 
     <script>
-        if (Auth.requireAuth()) {
-            initializeDashboard();
+        const accountMenu =
+            document.getElementById("account-menu");
+
+        const accountButton =
+            document.getElementById("account-button");
+
+        const accountDropdown =
+            document.getElementById("account-dropdown");
+
+        const accountAvatar =
+            document.getElementById("account-avatar");
+
+        const accountUsername =
+            document.getElementById("account-username");
+
+        const accountEmail =
+            document.getElementById("account-email");
+
+        const logoutButton =
+            document.getElementById("logout-button");
+
+
+        function closeAccountMenu() {
+            accountDropdown.hidden = true;
+
+            accountButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
         }
 
-        const logoutButton = document.getElementById("logout-button");
+
+        accountButton.addEventListener(
+            "click",
+            () => {
+                const shouldOpen =
+                    accountDropdown.hidden;
+
+                accountDropdown.hidden =
+                    !shouldOpen;
+
+                accountButton.setAttribute(
+                    "aria-expanded",
+                    String(shouldOpen)
+                );
+            }
+        );
+
 
         logoutButton.addEventListener(
             "click",
             Auth.logout
         );
+
+
+        document.addEventListener(
+            "click",
+            (event) => {
+                if (
+                    !accountMenu.contains(
+                        event.target
+                    )
+                ) {
+                    closeAccountMenu();
+                }
+            }
+        );
+
+
+        document.addEventListener(
+            "keydown",
+            (event) => {
+                if (event.key === "Escape") {
+                    closeAccountMenu();
+                }
+            }
+        );
+
+
+        if (Auth.requireAuth()) {
+            initializeDashboard();
+        }
 
         async function initializeDashboard() {
             await Promise.all([
@@ -62,16 +167,43 @@
             );
         }
 
-        async function loadCurrentUser() {
+       async function loadCurrentUser() {
             try {
-                const response = await Auth.apiRequest("/auth/me");
+                const response =
+                    await Auth.apiRequest(
+                        "/auth/me"
+                    );
 
-                const user = await response.json();
+                const user =
+                    await response.json();
 
-                document.getElementById("current-user").textContent =
-                    `Logged in as ${user.username}`;
+                if (!response.ok) {
+                    throw new Error(
+                        user.detail
+                        || "Could not load account"
+                    );
+                }
+
+                const firstCharacter =
+                    user.username
+                        .charAt(0)
+                        .toUpperCase();
+
+                accountAvatar.textContent =
+                    firstCharacter;
+
+                accountUsername.textContent =
+                    user.username;
+
+                accountEmail.textContent =
+                    user.email;
+
+                accountButton.title =
+                    `Account: ${user.username}`;
 
             } catch (error) {
+                accountAvatar.textContent = "?";
+
                 showMessage(
                     error.message,
                     true
