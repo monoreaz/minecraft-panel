@@ -311,7 +311,11 @@
                 createActionButton(
                     "Start",
                     "primary",
-                    () => runServerAction(server.id, "start")
+                    (event) => runServerAction(
+                        server.id,
+                        "start",
+                        event.currentTarget
+                    )
                 ),
                 createActionButton(
                     "Stop",
@@ -344,8 +348,15 @@
             return card;
         }
 
-        function createActionButton(text, className, handler) {
-            const button = document.createElement("button");
+        function createActionButton(
+            text,
+            className,
+            handler
+        ) {
+            const button =
+                document.createElement(
+                    "button"
+                );
 
             button.type = "button";
             button.textContent = text;
@@ -359,28 +370,298 @@
             return button;
         }
 
-        async function runServerAction(serverId, action) {
-            try {
-                const response = await Auth.apiRequest(
-                    `/servers/${serverId}/${action}`,
-                    {
-                        method: "POST"
-                    }
+        function setServerStarting(
+            card,
+            startButton
+        ) {
+            const status =
+                card.querySelector(
+                    ".server-status"
                 );
 
-                const data = await response.json();
+            const players =
+                card.querySelector(
+                    ".server-players"
+                );
+
+            card.dataset.state = "starting";
+            card.classList.add("server-card-starting");
+
+            status.textContent =
+                "Status: starting...";
+
+            status.className =
+                "server-status status-starting";
+
+            players.textContent =
+                "Players: waiting for server...";
+
+            startButton.disabled = true;
+
+            startButton.replaceChildren();
+
+            const spinner =
+                document.createElement("span");
+
+            spinner.className =
+                "button-spinner";
+
+            const label =
+                document.createElement("span");
+
+            label.textContent =
+                "Starting...";
+
+            startButton.append(
+                spinner,
+                label
+            );
+        }
+
+
+        function setServerOnline(
+            card,
+            data
+        ) {
+            const status =
+                card.querySelector(
+                    ".server-status"
+                );
+
+            const players =
+                card.querySelector(
+                    ".server-players"
+                );
+
+            const startButton =
+                card.querySelector(
+                    ".server-actions .primary"
+                );
+
+            card.dataset.state = "online";
+
+            card.classList.remove(
+                "server-card-starting"
+            );
+
+            status.textContent =
+                "Status: online";
+
+            status.className =
+                "server-status status-online";
+
+            players.textContent =
+                `Players: ${data.players}/${data.max_players}`;
+
+            if (startButton) {
+                startButton.disabled = true;
+                startButton.textContent = "Running";
+            }
+        }
+
+
+        function setServerOffline(card) {
+            const status =
+                card.querySelector(
+                    ".server-status"
+                );
+
+            const players =
+                card.querySelector(
+                    ".server-players"
+                );
+
+            const startButton =
+                card.querySelector(
+                    ".server-actions .primary"
+                );
+
+            card.dataset.state = "offline";
+
+            card.classList.remove(
+                "server-card-starting"
+            );
+
+            status.textContent =
+                "Status: offline";
+
+            status.className =
+                "server-status status-offline";
+
+            players.textContent =
+                "Players: 0/0";
+
+            if (startButton) {
+                startButton.disabled = false;
+                startButton.textContent = "Start";
+            }
+        }
+
+
+        function wait(milliseconds) {
+            return new Promise(
+                (resolve) => {
+                    setTimeout(
+                        resolve,
+                        milliseconds
+                    );
+                }
+            );
+        }
+
+
+        async function waitForServerOnline(
+            serverId,
+            card
+        ) {
+            const maximumAttempts = 60;
+
+            for (
+                let attempt = 0;
+                attempt < maximumAttempts;
+                attempt += 1
+            ) {
+                await wait(1000);
+
+                const response =
+                    await Auth.apiRequest(
+                        `/servers/${serverId}/status`
+                    );
+
+                const data =
+                    await response.json();
+
+                if (data.online) {
+                    setServerOnline(
+                        card,
+                        data
+                    );
+
+                    showMessage(
+                        "Server is online",
+                        false
+                    );
+
+                    return;
+                }
+            }
+
+            card.dataset.state = "offline";
+
+            card.classList.remove(
+                "server-card-starting"
+            );
+
+            const status =
+                card.querySelector(
+                    ".server-status"
+                );
+
+            const startButton =
+                card.querySelector(
+                    ".server-actions .primary"
+                );
+
+            status.textContent =
+                "Status: startup is taking longer than expected";
+
+            status.className =
+                "server-status status-starting";
+
+            if (startButton) {
+                startButton.disabled = false;
+                startButton.textContent = "Start";
+            }
+
+            showMessage(
+                "The server is taking longer than expected to start",
+                true
+            );
+        }
+
+        async function runServerAction(
+            serverId,
+            action,
+            actionButton = null
+        ) {
+            const card =
+                actionButton
+                    ? actionButton.closest(
+                        ".server-card"
+                    )
+                    : document.querySelector(
+                        `[data-server-id="${serverId}"]`
+                    );
+
+            if (
+                action === "start"
+                && card
+                && actionButton
+            ) {
+                setServerStarting(
+                    card,
+                    actionButton
+                );
+            }
+
+            try {
+                const response =
+                    await Auth.apiRequest(
+                        `/servers/${serverId}/${action}`,
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (
+                    !response.ok
+                    || !data.success
+                ) {
+                    if (
+                        action === "start"
+                        && card
+                    ) {
+                        setServerOffline(card);
+                    }
+
+                    throw new Error(
+                        data.detail
+                        || data.message
+                        || "Server action failed"
+                    );
+                }
 
                 showMessage(
                     data.message,
-                    !data.success
+                    false
                 );
 
-                setTimeout(
-                    refreshStatuses,
-                    1000
-                );
+                if (
+                    action === "start"
+                    && card
+                ) {
+                    await waitForServerOnline(
+                        serverId,
+                        card
+                    );
+
+                    return;
+                }
+
+                await wait(1000);
+                await refreshStatuses();
 
             } catch (error) {
+                if (
+                    action === "start"
+                    && card
+                ) {
+                    setServerOffline(card);
+                }
+
                 showMessage(
                     error.message,
                     true
@@ -424,34 +705,42 @@
             }
         }
 
-        async function refreshStatuses() {
-            const cards = document.querySelectorAll("[data-server-id]");
+       async function refreshStatuses() {
+            const cards =
+                document.querySelectorAll(
+                    "[data-server-id]"
+                );
 
             for (const card of cards) {
-                const serverId = card.dataset.serverId;
+                const serverId =
+                    card.dataset.serverId;
 
                 try {
-                    const response = await Auth.apiRequest(
-                        `/servers/${serverId}/status`
-                    );
+                    const response =
+                        await Auth.apiRequest(
+                            `/servers/${serverId}/status`
+                        );
 
-                    const data = await response.json();
-
-                    const status = card.querySelector(".server-status");
-                    const players = card.querySelector(".server-players");
+                    const data =
+                        await response.json();
 
                     if (data.online) {
-                        status.textContent = "Status: online";
-                        status.className = "server-status status-online";
+                        setServerOnline(
+                            card,
+                            data
+                        );
 
-                        players.textContent =
-                            `Players: ${data.players}/${data.max_players}`;
-
-                    } else {
-                        status.textContent = "Status: offline";
-                        status.className = "server-status status-offline";
-                        players.textContent = "Players: 0/0";
+                        continue;
                     }
+
+                    if (
+                        card.dataset.state
+                        === "starting"
+                    ) {
+                        continue;
+                    }
+
+                    setServerOffline(card);
 
                 } catch (error) {
                     console.error(error);

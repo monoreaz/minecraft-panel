@@ -302,3 +302,41 @@ button:disabled {
         right: 0;
     }
 }
+
+.status-starting {
+    color: #f2c94c;
+}
+
+.server-card-starting {
+    border-color: #f2c94c;
+    animation: server-starting-pulse 1.6s ease-in-out infinite;
+}
+
+.button-spinner {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-right: 8px;
+    vertical-align: -2px;
+    border: 2px solid rgb(255 255 255 / 35%);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: button-spinner-rotation 0.8s linear infinite;
+}
+
+@keyframes button-spinner-rotation {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes server-starting-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 rgb(242 201 76 / 0%);
+    }
+
+    50% {
+        box-shadow: 0 0 22px rgb(242 201 76 / 22%);
+    }
+}
