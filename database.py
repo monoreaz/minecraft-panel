@@ -319,3 +319,21 @@ def remove_server(
 
     finally:
         connection.close()
+
+def count_servers_by_user(user_id: int):
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT COUNT(*) AS server_count
+            FROM servers
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        return row["server_count"]
+
+    finally:
+        connection.close()   

@@ -14,6 +14,7 @@ from mcstatus import JavaServer
 
 from database import (
     add_server,
+    count_servers_by_user,
     get_all_server_ports,
     get_server_by_id,
     get_server_by_name,
@@ -31,6 +32,12 @@ SERVER_HOST = os.getenv(
     "127.0.0.1"
 )
 
+MAX_SERVERS_PER_USER = int(
+    os.getenv(
+        "MAX_SERVERS_PER_USER",
+        "2"
+    )
+)
 
 SERVERS_DIRECTORY = Path(
     "/home/artur/minecraft-servers"
@@ -119,6 +126,20 @@ def create_server(
         return {
             "success": False,
             "message": "Invalid server name"
+        }
+
+    server_count = count_servers_by_user(
+        user_id
+    )
+
+    if server_count >= MAX_SERVERS_PER_USER:
+        return {
+            "success": False,
+            "message": (
+                "Server limit reached. "
+                f"Maximum allowed: "
+                f"{MAX_SERVERS_PER_USER}"
+            )
         }
 
     existing_server = get_server_by_name(
