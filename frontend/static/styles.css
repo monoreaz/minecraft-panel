@@ -441,6 +441,55 @@ button:disabled {
     margin-bottom: 20px;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    display: flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #a9a9a9;
+    background: transparent;
+    border-radius: 6px;
+    transform: translateY(-50%);
+}
+
+.password-toggle:hover {
+    color: #ffffff;
+    background: #303030;
+}
+
+.password-toggle:focus-visible {
+    color: #ffffff;
+    outline: 2px solid #4caf50;
+    outline-offset: 1px;
+}
+
+.password-icon {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.password-icon[hidden] {
+    display: none;
+}
+
 @media (max-width: 600px) {
 
     .settings-header {
