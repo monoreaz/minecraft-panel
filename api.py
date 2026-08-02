@@ -52,6 +52,15 @@ def create_page():
         FRONTEND_DIR / "create.html"
     )
 
+@app.get(
+    "/account",
+    include_in_schema=False
+)
+def account_page():
+    return FileResponse(
+        FRONTEND_DIR / "account.html"
+    )
+
 
 @app.get(
     "/register",

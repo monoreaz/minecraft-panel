@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Account settings</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+</head>
+
+<body>
+    <main class="page settings-page">
+        <header class="settings-header">
+            <div>
+                <a
+                    class="back-link"
+                    href="/"
+                >
+                    ← Back to dashboard
+                </a>
+
+                <h1>Account settings</h1>
+
+                <p class="settings-subtitle">
+                    Manage your profile and account preferences
+                </p>
+            </div>
+
+            <button
+                id="logout-button"
+                class="secondary"
+                type="button"
+            >
+                Log out
+            </button>
+        </header>
+
+        <div
+            id="message"
+            class="message"
+            aria-live="polite"
+        ></div>
+
+        <section class="settings-grid">
+            <article class="settings-card profile-card">
+                <div
+                    id="settings-avatar"
+                    class="settings-avatar"
+                >
+                    ?
+                </div>
+
+                <div>
+                    <h2 id="profile-username">
+                        Loading...
+                    </h2>
+
+                    <p id="profile-email">
+                        Loading account...
+                    </p>
+                </div>
+            </article>
+
+            <article class="settings-card">
+                <h2>Profile</h2>
+
+                <div class="settings-row">
+                    <div>
+                        <span class="settings-label">
+                            Username
+                        </span>
+
+                        <strong id="account-username">
+                            Loading...
+                        </strong>
+                    </div>
+
+                    <button
+                        class="secondary"
+                        type="button"
+                        disabled
+                    >
+                        Change
+                    </button>
+                </div>
+
+                <div class="settings-row">
+                    <div>
+                        <span class="settings-label">
+                            Email
+                        </span>
+
+                        <strong id="account-email">
+                            Loading...
+                        </strong>
+                    </div>
+
+                    <button
+                        class="secondary"
+                        type="button"
+                        disabled
+                    >
+                        Change
+                    </button>
+                </div>
+            </article>
+
+            <article class="settings-card">
+                <h2>Security</h2>
+
+                <div class="settings-row">
+                    <div>
+                        <span class="settings-label">
+                            Password
+                        </span>
+
+                        <strong>
+                            ••••••••
+                        </strong>
+                    </div>
+
+                    <button
+                        class="secondary"
+                        type="button"
+                        disabled
+                    >
+                        Change password
+                    </button>
+                </div>
+            </article>
+
+            <article class="settings-card">
+                <h2>Account status</h2>
+
+                <div class="settings-row">
+                    <div>
+                        <span class="settings-label">
+                            Status
+                        </span>
+
+                        <strong
+                            id="account-status"
+                            class="account-status"
+                        >
+                            Loading...
+                        </strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="settings-card">
+                <h2>Subscription</h2>
+
+                <div class="settings-row">
+                    <div>
+                        <span class="settings-label">
+                            Current plan
+                        </span>
+
+                        <strong>
+                            Free
+                        </strong>
+                    </div>
+
+                    <button
+                        class="primary"
+                        type="button"
+                        disabled
+                    >
+                        Upgrade
+                    </button>
+                </div>
+
+                <p class="settings-note">
+                    Subscription plans will be available later.
+                </p>
+            </article>
+        </section>
+    </main>
+
+    <script src="/static/auth.js"></script>
+
+    <script>
+        const logoutButton =
+            document.getElementById(
+                "logout-button"
+            );
+
+        logoutButton.addEventListener(
+            "click",
+            Auth.logout
+        );
+
+
+        async function loadAccount() {
+            try {
+                const response =
+                    await Auth.apiRequest(
+                        "/auth/me"
+                    );
+
+                const user =
+                    await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        user.detail
+                        || "Could not load account"
+                    );
+                }
+
+                const firstCharacter =
+                    user.username
+                        .charAt(0)
+                        .toUpperCase();
+
+                document.getElementById(
+                    "settings-avatar"
+                ).textContent = firstCharacter;
+
+                document.getElementById(
+                    "profile-username"
+                ).textContent = user.username;
+
+                document.getElementById(
+                    "profile-email"
+                ).textContent = user.email;
+
+                document.getElementById(
+                    "account-username"
+                ).textContent = user.username;
+
+                document.getElementById(
+                    "account-email"
+                ).textContent = user.email;
+
+                const accountStatus =
+                    document.getElementById(
+                        "account-status"
+                    );
+
+                accountStatus.textContent =
+                    user.is_active
+                        ? "Active"
+                        : "Disabled";
+
+                accountStatus.className =
+                    user.is_active
+                        ? "account-status active"
+                        : "account-status disabled";
+
+            } catch (error) {
+                showMessage(
+                    error.message,
+                    true
+                );
+            }
+        }
+
+
+        function showMessage(
+            text,
+            isError
+        ) {
+            const message =
+                document.getElementById(
+                    "message"
+                );
+
+            message.textContent = text;
+
+            message.className =
+                isError
+                    ? "message error"
+                    : "message success";
+        }
+
+
+        if (Auth.requireAuth()) {
+            loadAccount();
+        }
+    </script>
+</body>
+
+</html>
