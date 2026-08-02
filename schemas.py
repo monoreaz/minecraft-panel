@@ -44,3 +44,45 @@ class ServerCreate(BaseModel):
         max_length=64,
         pattern=r"^[A-Za-z0-9._-]+$"
     )
+class UsernameUpdate(BaseModel):
+    username: str = Field(
+        min_length=3,
+        max_length=32,
+        pattern=r"^[A-Za-z0-9_]+$"
+    )
+
+    current_password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+
+class EmailUpdate(BaseModel):
+    email: EmailStr
+
+    current_password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+
+class PasswordUpdate(BaseModel):
+    current_password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+    confirm_password: str = Field(
+        min_length=8,
+        max_length=128
+    )
+
+
+class MessageResponse(BaseModel):
+    success: bool
+    message: str

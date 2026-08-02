@@ -421,6 +421,26 @@ button:disabled {
     color: #ff7777;
 }
 
+.settings-form {
+    margin-top: 18px;
+    padding-top: 20px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.settings-form[hidden] {
+    display: none;
+}
+
+.settings-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.settings-form .form-group:last-of-type {
+    margin-bottom: 20px;
+}
+
 @media (max-width: 600px) {
 
     .settings-header {

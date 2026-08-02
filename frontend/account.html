@@ -83,15 +83,61 @@
                         </strong>
                     </div>
 
-                    <button
-                        class="secondary"
-                        type="button"
-                        disabled
-                    >
+                  <button id="change-username-button" class="secondary" type="button">
                         Change
                     </button>
                 </div>
+            <form id="username-form" class="settings-form" hidden>
+                <div class="form-group">
+                    <label for="new-username">
+                        New username
+                    </label>
 
+                    <input
+                        id="new-username"
+                        name="username"
+                        type="text"
+                        minlength="3"
+                        maxlength="32"
+                        pattern="[A-Za-z0-9_]+"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username-current-password">
+                        Current password
+                    </label>
+
+                    <input
+                        id="username-current-password"
+                        name="current_password"
+                        type="password"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <div class="settings-form-actions">
+                    <button
+                        class="primary"
+                        type="submit"
+                    >
+                        Save username
+                    </button>
+
+                    <button
+                        id="cancel-username-button"
+                        class="secondary"
+                        type="button"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
                 <div class="settings-row">
                     <div>
                         <span class="settings-label">
@@ -103,14 +149,63 @@
                         </strong>
                     </div>
 
-                    <button
-                        class="secondary"
-                        type="button"
-                        disabled
-                    >
+<button id="change-email-button" class="secondary" type="button">
                         Change
                     </button>
                 </div>
+<form
+    id="email-form"
+    class="settings-form"
+    hidden
+>
+    <div class="form-group">
+        <label for="new-email">
+            New email
+        </label>
+
+        <input
+            id="new-email"
+            name="email"
+            type="email"
+            maxlength="254"
+            autocomplete="email"
+            required
+        >
+    </div>
+
+    <div class="form-group">
+        <label for="email-current-password">
+            Current password
+        </label>
+
+        <input
+            id="email-current-password"
+            name="current_password"
+            type="password"
+            minlength="8"
+            maxlength="128"
+            autocomplete="current-password"
+            required
+        >
+    </div>
+
+    <div class="settings-form-actions">
+        <button
+            class="primary"
+            type="submit"
+        >
+            Save email
+        </button>
+
+        <button
+            id="cancel-email-button"
+            class="secondary"
+            type="button"
+        >
+            Cancel
+        </button>
+    </div>
+</form>
             </article>
 
             <article class="settings-card">
@@ -127,14 +222,81 @@
                         </strong>
                     </div>
 
-                    <button
-                        class="secondary"
-                        type="button"
-                        disabled
-                    >
+<button id="change-password-button" class="secondary" type="button">
                         Change password
                     </button>
                 </div>
+
+                 <form
+        id="password-form"
+        class="settings-form"
+        hidden
+    >
+        <div class="form-group">
+            <label for="current-password">
+                Current password
+            </label>
+
+            <input
+                id="current-password"
+                name="current_password"
+                type="password"
+                minlength="8"
+                maxlength="128"
+                autocomplete="current-password"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="new-password">
+                New password
+            </label>
+
+            <input
+                id="new-password"
+                name="new_password"
+                type="password"
+                minlength="8"
+                maxlength="128"
+                autocomplete="new-password"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="confirm-password">
+                Confirm new password
+            </label>
+
+            <input
+                id="confirm-password"
+                name="confirm_password"
+                type="password"
+                minlength="8"
+                maxlength="128"
+                autocomplete="new-password"
+                required
+            >
+        </div>
+
+        <div class="settings-form-actions">
+            <button
+                class="primary"
+                type="submit"
+            >
+                Save password
+            </button>
+
+            <button
+                id="cancel-password-button"
+                class="secondary"
+                type="button"
+            >
+                Cancel
+            </button>
+        </div>
+    </form>
             </article>
 
             <article class="settings-card">
@@ -199,6 +361,338 @@
             Auth.logout
         );
 
+    const usernameForm =
+        document.getElementById(
+            "username-form"
+        );
+
+    const emailForm =
+        document.getElementById(
+            "email-form"
+        );
+
+    const passwordForm =
+        document.getElementById(
+            "password-form"
+        );
+
+    const changeUsernameButton =
+        document.getElementById(
+            "change-username-button"
+        );
+
+    const changeEmailButton =
+        document.getElementById(
+            "change-email-button"
+        );
+
+    const changePasswordButton =
+        document.getElementById(
+            "change-password-button"
+        );
+
+
+    function openSettingsForm(form) {
+        usernameForm.hidden = true;
+        emailForm.hidden = true;
+        passwordForm.hidden = true;
+
+        form.hidden = false;
+
+        const firstInput =
+            form.querySelector("input");
+
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }
+
+
+    function closeSettingsForm(form) {
+        form.hidden = true;
+        form.reset();
+    }
+
+
+    changeUsernameButton.addEventListener(
+        "click",
+        () => {
+            openSettingsForm(
+                usernameForm
+            );
+        }
+    );
+
+
+    changeEmailButton.addEventListener(
+        "click",
+        () => {
+            openSettingsForm(
+                emailForm
+            );
+        }
+    );
+
+
+    changePasswordButton.addEventListener(
+        "click",
+        () => {
+            openSettingsForm(
+                passwordForm
+            );
+        }
+    );
+
+
+    document.getElementById(
+        "cancel-username-button"
+    ).addEventListener(
+        "click",
+        () => {
+            closeSettingsForm(
+                usernameForm
+            );
+        }
+    );
+
+
+    document.getElementById(
+        "cancel-email-button"
+    ).addEventListener(
+        "click",
+        () => {
+            closeSettingsForm(
+                emailForm
+            );
+        }
+    );
+
+
+    document.getElementById(
+        "cancel-password-button"
+    ).addEventListener(
+        "click",
+        () => {
+            closeSettingsForm(
+                passwordForm
+            );
+        }
+    );
+
+    usernameForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+
+        const submitButton =
+            usernameForm.querySelector(
+                'button[type="submit"]'
+            );
+
+        submitButton.disabled = true;
+
+        try {
+            const response =
+                await Auth.apiRequest(
+                    "/auth/me/username",
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            username:
+                                usernameForm
+                                    .username
+                                    .value
+                                    .trim(),
+
+                            current_password:
+                                usernameForm
+                                    .current_password
+                                    .value
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail
+                    || "Could not update username"
+                );
+            }
+
+            closeSettingsForm(
+                usernameForm
+            );
+
+            showMessage(
+                "Username successfully changed",
+                false
+            );
+
+            await loadAccount();
+
+        } catch (error) {
+            showMessage(
+                error.message,
+                true
+            );
+
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+);
+
+emailForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+
+        const submitButton =
+            emailForm.querySelector(
+                'button[type="submit"]'
+            );
+
+        submitButton.disabled = true;
+
+        try {
+            const response =
+                await Auth.apiRequest(
+                    "/auth/me/email",
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            email:
+                                emailForm
+                                    .email
+                                    .value
+                                    .trim(),
+
+                            current_password:
+                                emailForm
+                                    .current_password
+                                    .value
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail
+                    || "Could not update email"
+                );
+            }
+
+            closeSettingsForm(
+                emailForm
+            );
+
+            showMessage(
+                "Email successfully changed",
+                false
+            );
+
+            await loadAccount();
+
+        } catch (error) {
+            showMessage(
+                error.message,
+                true
+            );
+
+        } finally {
+            submitButton.disabled = false;
+        }
+    }
+);
+
+passwordForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+
+        const submitButton =
+            passwordForm.querySelector(
+                'button[type="submit"]'
+            );
+
+        submitButton.disabled = true;
+
+        try {
+            const response =
+                await Auth.apiRequest(
+                    "/auth/me/password",
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            current_password:
+                                passwordForm
+                                    .current_password
+                                    .value,
+
+                            new_password:
+                                passwordForm
+                                    .new_password
+                                    .value,
+
+                            confirm_password:
+                                passwordForm
+                                    .confirm_password
+                                    .value
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail
+                    || "Could not update password"
+                );
+            }
+
+            passwordForm.reset();
+
+            showMessage(
+                data.message
+                + ". Please log in again.",
+                false
+            );
+
+            setTimeout(
+                Auth.logout,
+                1500
+            );
+
+        } catch (error) {
+            showMessage(
+                error.message,
+                true
+            );
+
+            submitButton.disabled = false;
+        }
+    }
+);
 
         async function loadAccount() {
             try {
@@ -241,6 +735,14 @@
                 document.getElementById(
                     "account-email"
                 ).textContent = user.email;
+
+                document.getElementById(
+                    "new-username"
+                ).value = user.username;
+
+                document.getElementById(
+                    "new-email"
+                ).value = user.email;
 
                 const accountStatus =
                     document.getElementById(

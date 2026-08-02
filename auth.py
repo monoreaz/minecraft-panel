@@ -18,13 +18,20 @@ from database import (
     add_user,
     get_user_by_email,
     get_user_by_id,
-    get_user_by_username
+    get_user_by_username,
+    update_user_email,
+    update_user_password_hash,
+    update_user_username
 )
 
 from schemas import (
+    EmailUpdate,
+    MessageResponse,
+    PasswordUpdate,
     TokenResponse,
     UserPublic,
-    UserRegister
+    UserRegister,
+    UsernameUpdate
 )
 
 from security import (
@@ -82,6 +89,18 @@ def get_current_user(
 
     return user
 
+def require_current_password(
+    current_password: str,
+    current_user: dict
+):
+    if not verify_password(
+        current_password,
+        current_user["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
 
 @router.post(
     "/register",
@@ -180,3 +199,170 @@ def read_current_user(
     ]
 ):
     return current_user
+
+@router.patch(
+    "/me/username",
+    response_model=UserPublic
+)
+def update_current_username(
+    data: UsernameUpdate,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    require_current_password(
+        data.current_password,
+        current_user
+    )
+
+    username = data.username.strip()
+
+    existing_user = get_user_by_username(
+        username
+    )
+
+    if (
+        existing_user is not None
+        and existing_user["id"]
+        != current_user["id"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already taken"
+        )
+
+    try:
+        updated = update_user_username(
+            current_user["id"],
+            username
+        )
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already taken"
+        )
+
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return get_user_by_id(
+        current_user["id"]
+    )
+
+
+@router.patch(
+    "/me/email",
+    response_model=UserPublic
+)
+def update_current_email(
+    data: EmailUpdate,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    require_current_password(
+        data.current_password,
+        current_user
+    )
+
+    email = str(data.email).lower()
+
+    existing_user = get_user_by_email(
+        email
+    )
+
+    if (
+        existing_user is not None
+        and existing_user["id"]
+        != current_user["id"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered"
+        )
+
+    try:
+        updated = update_user_email(
+            current_user["id"],
+            email
+        )
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered"
+        )
+
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return get_user_by_id(
+        current_user["id"]
+    )
+
+
+@router.patch(
+    "/me/password",
+    response_model=MessageResponse
+)
+def update_current_password(
+    data: PasswordUpdate,
+    current_user: Annotated[
+        dict,
+        Depends(get_current_user)
+    ]
+):
+    require_current_password(
+        data.current_password,
+        current_user
+    )
+
+    if (
+        data.new_password
+        != data.confirm_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New passwords do not match"
+        )
+
+    if verify_password(
+        data.new_password,
+        current_user["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "New password must be different "
+                "from the current password"
+            )
+        )
+
+    password_hash = hash_password(
+        data.new_password
+    )
+
+    updated = update_user_password_hash(
+        current_user["id"],
+        password_hash
+    )
+
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return {
+        "success": True,
+        "message": "Password successfully changed"
+    }

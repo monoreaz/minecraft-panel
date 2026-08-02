@@ -337,3 +337,83 @@ def count_servers_by_user(user_id: int):
 
     finally:
         connection.close()   
+
+def update_user_username(
+    user_id: int,
+    username: str
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE users
+            SET username = ?
+            WHERE id = ?
+            """,
+            (
+                username,
+                user_id
+            )
+        )
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        connection.close()
+
+
+def update_user_email(
+    user_id: int,
+    email: str
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE users
+            SET email = ?
+            WHERE id = ?
+            """,
+            (
+                email,
+                user_id
+            )
+        )
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        connection.close()
+
+
+def update_user_password_hash(
+    user_id: int,
+    password_hash: str
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE users
+            SET password_hash = ?
+            WHERE id = ?
+            """,
+            (
+                password_hash,
+                user_id
+            )
+        )
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        connection.close()
