@@ -86,11 +86,20 @@
                     throw new Error(data.detail || "Registration failed");
                 }
 
-                message.textContent = "Account created successfully";
-                message.className = "message success";
+                message.textContent =
+                "Account created. Check your email for the verification code.";
+
+                message.className =
+                    "message success";
+
+                const verificationEmail =
+                    encodeURIComponent(
+                        payload.email
+                    );
 
                 setTimeout(() => {
-                    window.location.href = "/login";
+                    window.location.href =
+                        `/verify-email?email=${verificationEmail}`;
                 }, 700);
 
             } catch (error) {

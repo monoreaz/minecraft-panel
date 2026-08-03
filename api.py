@@ -71,6 +71,14 @@ def register_page():
         FRONTEND_DIR / "register.html"
     )
 
+@app.get(
+    "/verify-email",
+    include_in_schema=False
+)
+def verify_email_page():
+    return FileResponse(
+        FRONTEND_DIR / "verify-email.html"
+    )
 
 @app.get(
     "/login",

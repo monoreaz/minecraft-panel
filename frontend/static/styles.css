@@ -569,3 +569,18 @@ button:disabled {
         box-shadow: 0 0 22px rgb(242 201 76 / 22%);
     }
 }
+.verification-description {
+    margin-bottom: 22px;
+    color: #aaaaaa;
+}
+
+.verification-code-input {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-align: center;
+}
+
+.verification-resend {
+    margin-top: 12px;
+}

@@ -594,15 +594,25 @@ emailForm.addEventListener(
             }
 
             closeSettingsForm(
-                emailForm
+            emailForm
+        );
+
+        showMessage(
+            "Email changed. Verify your new address.",
+            false
+        );
+
+        Auth.clearToken();
+
+        const verificationEmail =
+            encodeURIComponent(
+                data.email
             );
 
-            showMessage(
-                "Email successfully changed",
-                false
-            );
-
-            await loadAccount();
+        setTimeout(() => {
+            window.location.href =
+                `/verify-email?email=${verificationEmail}`;
+        }, 900);
 
         } catch (error) {
             showMessage(

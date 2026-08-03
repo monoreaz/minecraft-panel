@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import os
+import secrets
 
 from datetime import (
     datetime,
@@ -30,12 +33,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
     )
 )
 
+EMAIL_VERIFICATION_SECRET = os.getenv(
+    "EMAIL_VERIFICATION_SECRET"
+)
 
 if not JWT_SECRET:
     raise RuntimeError(
         "JWT_SECRET is missing from the .env file"
     )
 
+if not EMAIL_VERIFICATION_SECRET:
+    raise RuntimeError(
+        "EMAIL_VERIFICATION_SECRET is missing "
+        "from the .env file"
+    )
 
 password_hasher = PasswordHash.recommended()
 
@@ -95,3 +106,46 @@ def decode_access_token(token: str):
         TypeError
     ):
         return None
+
+def generate_email_verification_code():
+    code = (
+        secrets.randbelow(900000)
+        + 100000
+    )
+
+    return str(code)
+
+
+def hash_email_verification_code(
+    email: str,
+    code: str
+):
+    message = (
+        f"{email.lower()}:{code}"
+    ).encode("utf-8")
+
+    return hmac.new(
+        EMAIL_VERIFICATION_SECRET.encode(
+            "utf-8"
+        ),
+        message,
+        hashlib.sha256
+    ).hexdigest()
+
+
+def verify_email_verification_code(
+    email: str,
+    code: str,
+    expected_hash: str
+):
+    provided_hash = (
+        hash_email_verification_code(
+            email,
+            code
+        )
+    )
+
+    return hmac.compare_digest(
+        provided_hash,
+        expected_hash
+    )

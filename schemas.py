@@ -25,6 +25,7 @@ class UserPublic(BaseModel):
     username: str
     email: EmailStr
     is_active: bool
+    email_verified: bool
 
 
 class TokenResponse(BaseModel):
@@ -86,3 +87,16 @@ class PasswordUpdate(BaseModel):
 class MessageResponse(BaseModel):
     success: bool
     message: str
+
+class EmailVerificationRequest(BaseModel):
+    email: EmailStr
+
+    code: str = Field(
+        min_length=6,
+        max_length=6,
+        pattern=r"^\d{6}$"
+    )
+
+
+class EmailVerificationResend(BaseModel):
+    email: EmailStr

@@ -22,13 +22,14 @@ def init_database():
     try:
         connection.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                is_active INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL
-                    DEFAULT CURRENT_TIMESTAMP
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            email_verified INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+            DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
@@ -50,7 +51,21 @@ def init_database():
                 UNIQUE (user_id, name)
             )
         """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS
+            email_verification_codes (
+            user_id INTEGER PRIMARY KEY,
+            code_hash TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            last_sent_at INTEGER NOT NULL,
+            failed_attempts INTEGER
+            NOT NULL DEFAULT 0,
 
+        FOREIGN KEY (user_id)
+            REFERENCES users(id)
+            ON DELETE CASCADE
+        )
+    """)
         connection.commit()
 
     finally:
@@ -60,7 +75,8 @@ def init_database():
 def add_user(
     username: str,
     email: str,
-    password_hash: str
+    password_hash: str,
+    email_verified: bool = False
 ):
     connection = get_connection()
 
@@ -70,14 +86,16 @@ def add_user(
             INSERT INTO users (
                 username,
                 email,
-                password_hash
+                password_hash,
+                email_verified
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?)
             """,
             (
                 username,
                 email,
-                password_hash
+                password_hash,
+                int(email_verified)
             )
         )
 
@@ -87,7 +105,6 @@ def add_user(
 
     finally:
         connection.close()
-
 
 def get_user_by_id(user_id: int):
     connection = get_connection()
@@ -367,7 +384,8 @@ def update_user_username(
 
 def update_user_email(
     user_id: int,
-    email: str
+    email: str,
+    email_verified: bool = False
 ):
     connection = get_connection()
 
@@ -375,11 +393,13 @@ def update_user_email(
         cursor = connection.execute(
             """
             UPDATE users
-            SET email = ?
+            SET email = ?,
+                email_verified = ?
             WHERE id = ?
             """,
             (
                 email,
+                int(email_verified),
                 user_id
             )
         )
@@ -414,6 +434,153 @@ def update_user_password_hash(
         connection.commit()
 
         return cursor.rowcount > 0
+
+    finally:
+        connection.close()
+
+def save_email_verification_code(
+    user_id: int,
+    code_hash: str,
+    expires_at: int,
+    last_sent_at: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO email_verification_codes (
+                user_id,
+                code_hash,
+                expires_at,
+                last_sent_at,
+                failed_attempts
+            )
+            VALUES (?, ?, ?, ?, 0)
+
+            ON CONFLICT(user_id)
+            DO UPDATE SET
+                code_hash = excluded.code_hash,
+                expires_at = excluded.expires_at,
+                last_sent_at = excluded.last_sent_at,
+                failed_attempts = 0
+            """,
+            (
+                user_id,
+                code_hash,
+                expires_at,
+                last_sent_at
+            )
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def get_email_verification_code(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT *
+            FROM email_verification_codes
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return dict(row)
+
+    finally:
+        connection.close()
+
+
+def increment_verification_attempts(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            UPDATE email_verification_codes
+            SET failed_attempts =
+                failed_attempts + 1
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def delete_email_verification_code(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            DELETE FROM email_verification_codes
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def mark_user_email_verified(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            UPDATE users
+            SET email_verified = 1
+            WHERE id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+        connection.close()
+
+
+def delete_user(user_id: int):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            DELETE FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
 
     finally:
         connection.close()
