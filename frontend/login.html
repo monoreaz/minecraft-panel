@@ -7,6 +7,7 @@
     <title>Login</title>
 
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/static/logo.png">
 </head>
 
 <body>
@@ -199,6 +200,23 @@ togglePasswordButton.addEventListener(
                 submitButton.disabled = false;
             }
         });
+
+        document.addEventListener("DOMContentLoaded", () => {
+    const forms = document.querySelectorAll("form");
+
+    forms.forEach((form) => {
+        form.setAttribute("autocomplete", "off");
+    });
+
+    const inputs = document.querySelectorAll("input");
+
+    inputs.forEach((input) => {
+        input.setAttribute("autocomplete", "off");
+        input.setAttribute("autocorrect", "off");
+        input.setAttribute("autocapitalize", "off");
+        input.setAttribute("spellcheck", "false");
+    });
+});
     </script>
 </body>
 </html>

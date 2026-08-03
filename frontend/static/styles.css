@@ -435,6 +435,7 @@ button:disabled {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    padding-bottom: 20px;
 }
 
 .settings-form .form-group:last-of-type {
@@ -488,6 +489,16 @@ button:disabled {
 
 .password-icon[hidden] {
     display: none;
+}
+
+.corner-logo {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 1000;
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
 }
 
 @media (max-width: 600px) {
