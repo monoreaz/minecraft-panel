@@ -213,6 +213,25 @@ def delete_minecraft_server(
         server_id,
         current_user["id"]
     )
+
+@app.get(
+    "/forgot-password",
+    include_in_schema=False
+)
+def forgot_password_page():
+    return FileResponse(
+        FRONTEND_DIR / "forgot-password.html"
+    )
+
+
+@app.get(
+    "/reset-password",
+    include_in_schema=False
+)
+def reset_password_page():
+    return FileResponse(
+        FRONTEND_DIR / "reset-password.html"
+    )
 # @app.get(
 #     "/register",
 #     include_in_schema=False

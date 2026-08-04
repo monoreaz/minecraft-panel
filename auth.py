@@ -32,7 +32,11 @@ from database import (
     save_email_verification_code,
     update_user_email,
     update_user_password_hash,
-    update_user_username
+    update_user_username,
+    delete_password_reset_code,
+    get_password_reset_code,
+    increment_password_reset_attempts,
+    save_password_reset_code,
 )
 
 from schemas import (
@@ -44,10 +48,13 @@ from schemas import (
     TokenResponse,
     UserPublic,
     UserRegister,
-    UsernameUpdate
+    UsernameUpdate,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 
 from email_service import (
+    send_password_reset_email,
     send_verification_email
 )
 
@@ -58,7 +65,10 @@ from security import (
     hash_email_verification_code,
     hash_password,
     verify_email_verification_code,
-    verify_password
+    verify_password,
+    generate_password_reset_code,
+    hash_password_reset_code,
+    verify_password_reset_code,
 )
 
 
@@ -89,6 +99,27 @@ EMAIL_VERIFICATION_RESEND_SECONDS = int(
 EMAIL_VERIFICATION_MAX_ATTEMPTS = int(
     os.getenv(
         "EMAIL_VERIFICATION_MAX_ATTEMPTS",
+        "5"
+    )
+)
+
+PASSWORD_RESET_EXPIRE_MINUTES = int(
+    os.getenv(
+        "PASSWORD_RESET_EXPIRE_MINUTES",
+        "10"
+    )
+)
+
+PASSWORD_RESET_RESEND_SECONDS = int(
+    os.getenv(
+        "PASSWORD_RESET_RESEND_SECONDS",
+        "60"
+    )
+)
+
+PASSWORD_RESET_MAX_ATTEMPTS = int(
+    os.getenv(
+        "PASSWORD_RESET_MAX_ATTEMPTS",
         "5"
     )
 )
@@ -137,6 +168,45 @@ def create_verification_code_for_user(
 
         raise
 
+def create_password_reset_code_for_user(
+    user: dict
+):
+    code = generate_password_reset_code()
+
+    current_time = int(
+        time.time()
+    )
+
+    expires_at = (
+        current_time
+        + PASSWORD_RESET_EXPIRE_MINUTES * 60
+    )
+
+    code_hash = hash_password_reset_code(
+        user["email"],
+        code
+    )
+
+    save_password_reset_code(
+        user_id=user["id"],
+        code_hash=code_hash,
+        expires_at=expires_at,
+        last_sent_at=current_time
+    )
+
+    try:
+        send_password_reset_email(
+            user["email"],
+            code
+        )
+
+    except Exception:
+        delete_password_reset_code(
+            user["id"]
+        )
+
+        raise
+
 def get_current_user(
     token: Annotated[
         str,
@@ -171,10 +241,10 @@ def get_current_user(
             detail="User account is disabled"
         )
 
-    if not user["is_active"]:
+    if not user["email_verified"]:
         raise HTTPException(
-            tatus_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email is not verified"
         )
 
     return user
@@ -724,4 +794,202 @@ def resend_verification(
     return {
         "success": True,
         "message": generic_message
+    }
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse
+)
+def forgot_password(
+    data: ForgotPasswordRequest
+):
+    email = str(data.email).lower()
+
+    generic_message = (
+        "If an account with this email exists, "
+        "a password reset code has been sent."
+    )
+
+    user = get_user_by_email(email)
+
+    if (
+        user is None
+        or not user["is_active"]
+        or not user["email_verified"]
+    ):
+        return {
+            "success": True,
+            "message": generic_message
+        }
+
+    existing_code = get_password_reset_code(
+        user["id"]
+    )
+
+    current_time = int(
+        time.time()
+    )
+
+    if existing_code is not None:
+        elapsed_seconds = (
+            current_time
+            - existing_code["last_sent_at"]
+        )
+
+        if (
+            elapsed_seconds
+            < PASSWORD_RESET_RESEND_SECONDS
+        ):
+            return {
+                "success": True,
+                "message": generic_message
+            }
+
+    try:
+        create_password_reset_code_for_user(
+            user
+        )
+
+    except Exception as error:
+        print(
+            "Could not send password reset email:",
+            error
+        )
+
+    return {
+        "success": True,
+        "message": generic_message
+    }
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse
+)
+def reset_password(
+    data: ResetPasswordRequest
+):
+    if (
+        data.new_password
+        != data.confirm_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New passwords do not match"
+        )
+
+    email = str(data.email).lower()
+
+    user = get_user_by_email(email)
+
+    if (
+        user is None
+        or not user["is_active"]
+        or not user["email_verified"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset code"
+        )
+
+    password_reset = get_password_reset_code(
+        user["id"]
+    )
+
+    if password_reset is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset code"
+        )
+
+    current_time = int(
+        time.time()
+    )
+
+    if (
+        password_reset["expires_at"]
+        <= current_time
+    ):
+        delete_password_reset_code(
+            user["id"]
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset code"
+        )
+
+    code_is_valid = verify_password_reset_code(
+        email,
+        data.code,
+        password_reset["code_hash"]
+    )
+
+    if not code_is_valid:
+        next_attempt_count = (
+            password_reset["failed_attempts"]
+            + 1
+        )
+
+        increment_password_reset_attempts(
+            user["id"]
+        )
+
+        if (
+            next_attempt_count
+            >= PASSWORD_RESET_MAX_ATTEMPTS
+        ):
+            delete_password_reset_code(
+                user["id"]
+            )
+
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_429_TOO_MANY_REQUESTS
+                ),
+                detail=(
+                    "Too many incorrect attempts. "
+                    "Request a new code."
+                )
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset code"
+        )
+
+    if verify_password(
+        data.new_password,
+        user["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "New password must be different "
+                "from the current password"
+            )
+        )
+
+    password_hash = hash_password(
+        data.new_password
+    )
+
+    updated = update_user_password_hash(
+        user["id"],
+        password_hash
+    )
+
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    delete_password_reset_code(
+        user["id"]
+    )
+
+    return {
+        "success": True,
+        "message": "Password successfully reset"
     }

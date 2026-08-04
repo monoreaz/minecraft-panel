@@ -37,6 +37,10 @@ EMAIL_VERIFICATION_SECRET = os.getenv(
     "EMAIL_VERIFICATION_SECRET"
 )
 
+PASSWORD_RESET_SECRET = os.getenv(
+    "PASSWORD_RESET_SECRET"
+)
+
 if not JWT_SECRET:
     raise RuntimeError(
         "JWT_SECRET is missing from the .env file"
@@ -45,6 +49,11 @@ if not JWT_SECRET:
 if not EMAIL_VERIFICATION_SECRET:
     raise RuntimeError(
         "EMAIL_VERIFICATION_SECRET is missing "
+        "from the .env file"
+    )
+if not PASSWORD_RESET_SECRET:
+    raise RuntimeError(
+        "PASSWORD_RESET_SECRET is missing "
         "from the .env file"
     )
 
@@ -140,6 +149,48 @@ def verify_email_verification_code(
 ):
     provided_hash = (
         hash_email_verification_code(
+            email,
+            code
+        )
+    )
+
+    return hmac.compare_digest(
+        provided_hash,
+        expected_hash
+    )
+def generate_password_reset_code():
+    code = (
+        secrets.randbelow(900000)
+        + 100000
+    )
+
+    return str(code)
+
+
+def hash_password_reset_code(
+    email: str,
+    code: str
+):
+    message = (
+        f"{email.lower()}:{code}"
+    ).encode("utf-8")
+
+    return hmac.new(
+        PASSWORD_RESET_SECRET.encode(
+            "utf-8"
+        ),
+        message,
+        hashlib.sha256
+    ).hexdigest()
+
+
+def verify_password_reset_code(
+    email: str,
+    code: str,
+    expected_hash: str
+):
+    provided_hash = (
+        hash_password_reset_code(
             email,
             code
         )

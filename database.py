@@ -20,20 +20,23 @@ def init_database():
     connection = get_connection()
 
     try:
-        connection.execute("""
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            email_verified INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL
-            DEFAULT CURRENT_TIMESTAMP
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                email_verified INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+            """
+        )
 
-        connection.execute("""
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS servers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -50,27 +53,49 @@ def init_database():
 
                 UNIQUE (user_id, name)
             )
-        """)
-        connection.execute("""
-            CREATE TABLE IF NOT EXISTS
-            email_verification_codes (
-            user_id INTEGER PRIMARY KEY,
-            code_hash TEXT NOT NULL,
-            expires_at INTEGER NOT NULL,
-            last_sent_at INTEGER NOT NULL,
-            failed_attempts INTEGER
-            NOT NULL DEFAULT 0,
-
-        FOREIGN KEY (user_id)
-            REFERENCES users(id)
-            ON DELETE CASCADE
+            """
         )
-    """)
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_verification_codes (
+                user_id INTEGER PRIMARY KEY,
+                code_hash TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                last_sent_at INTEGER NOT NULL,
+                failed_attempts INTEGER NOT NULL DEFAULT 0,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_codes (
+                user_id INTEGER PRIMARY KEY,
+                code_hash TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                last_sent_at INTEGER NOT NULL,
+                failed_attempts INTEGER NOT NULL DEFAULT 0,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+
         connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
 
     finally:
         connection.close()
-
 
 def add_user(
     username: str,
@@ -576,6 +601,109 @@ def delete_user(user_id: int):
             """
             DELETE FROM users
             WHERE id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+def save_password_reset_code(
+    user_id: int,
+    code_hash: str,
+    expires_at: int,
+    last_sent_at: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            INSERT INTO password_reset_codes (
+                user_id,
+                code_hash,
+                expires_at,
+                last_sent_at,
+                failed_attempts
+            )
+            VALUES (?, ?, ?, ?, 0)
+
+            ON CONFLICT(user_id)
+            DO UPDATE SET
+                code_hash = excluded.code_hash,
+                expires_at = excluded.expires_at,
+                last_sent_at = excluded.last_sent_at,
+                failed_attempts = 0
+            """,
+            (
+                user_id,
+                code_hash,
+                expires_at,
+                last_sent_at
+            )
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def get_password_reset_code(user_id: int):
+    connection = get_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT *
+            FROM password_reset_codes
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return dict(row)
+
+    finally:
+        connection.close()
+
+
+def increment_password_reset_attempts(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            UPDATE password_reset_codes
+            SET failed_attempts = failed_attempts + 1
+            WHERE user_id = ?
+            """,
+            (user_id,)
+        )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+def delete_password_reset_code(
+    user_id: int
+):
+    connection = get_connection()
+
+    try:
+        connection.execute(
+            """
+            DELETE FROM password_reset_codes
+            WHERE user_id = ?
             """,
             (user_id,)
         )
